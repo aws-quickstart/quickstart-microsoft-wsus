@@ -5,15 +5,18 @@ param (
 	[Parameter(Mandatory=$true)][int] $numOfSyncsPerDay
  )
  
- function CommaSeparatedListToStringCollection(string commaSeparatedList)
+ function CommaSeparatedListToStringCollection($commaSeparatedList)
  {
 	$strList = $commaSeparatedList.split(',');
 	$strCol = New-Object -TypeName "System.Collections.Specialized.StringCollection"
 	$strList.forEach{
-		$strCol.Add($_.trim())
+		$dummy = $strCol.Add($_.trim())
 	}
 	return $strCol
  }
+ 
+$transcriptPath = "C:\cfn\log\install-wsus-transcript.txt" -f $dirChar, $PSScriptRoot
+Start-Transcript $transcriptPath
 
 New-Item -Path D: -Name WSUS -ItemType Directory
 Set-Location -Path "C:\Program Files\Update Services\Tools"
@@ -64,3 +67,5 @@ $subscription.Save()
  
 #Kick off a synchronization
 $subscription.StartSynchronization()
+
+Stop-Transcript

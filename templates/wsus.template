@@ -33,8 +33,10 @@
                         "default": "Amazon EC2 Configuration"
                     },
                     "Parameters": [
-                        "KeyPairName",
+                        "WSUSServerNetBIOSName",
+						"KeyPairName",
                         "BastionSecurityGroupID",
+						"WindowsVersion",
                         "WorkloadInstanceType"
                     ]
                 },
@@ -43,8 +45,10 @@
                         "default": "WSUS Configuration"
                     },
                     "Parameters": [
-                        "QSS3BucketName",
-                        "QSS3KeyPrefix"
+						"WSUSLanguagesList",
+                        "WSUSProductList",
+                        "WSUSClassification",
+						"WSUSNumOfSyncsPerDay"
                     ]
                 },
                 {
@@ -52,8 +56,8 @@
                         "default": "AWS Quick Start Configuration"
                     },
                     "Parameters": [
-                        "WSUSProductList",
-                        "WSUSClassification"
+                        "QSS3BucketName",
+                        "QSS3KeyPrefix"
                     ]
                 }
             ],
@@ -97,6 +101,9 @@
 				"WSUSServerNetBIOSName": {
                     "default": "Server NetBIOS Name"
                 },
+				"WSUSLanguagesList": {
+					"default": "Supported languages"
+				},
 				"WSUSProductList": {
 					"default": "WSUS Products"
 				},
@@ -105,6 +112,9 @@
 				},
 				"WSUSNumOfSyncsPerDay": {
 					"default": "Number of WSUS Synchronizations per day"
+				},
+				"WindowsVersion": {
+					"default": "Windows version"
 				}
             }
         }
@@ -132,7 +142,7 @@
         "QSS3KeyPrefix": {
             "AllowedPattern": "^[0-9a-zA-Z-/]*$",
             "ConstraintDescription": "Quick Start key prefix can include numbers, lowercase letters, uppercase letters, hyphens (-), and forward slash (/).",
-            "Default": "quickstart-microsoft-sql/",
+            "Default": "quickstart-microsoft-wsus/",
             "Description": "S3 key prefix for the Quick Start assets. Quick Start key prefix can include numbers, lowercase letters, uppercase letters, hyphens (-), and forward slash (/).",
             "Type": "String"
         },
@@ -204,6 +214,16 @@
             "Description": "Configure number of WSUS synchronizations per day",
             "Type": "Number"
         },
+        "WindowsVersion": {
+            "AllowedValues": [
+                "Windows2019Full",
+                "Windows2019Core"
+            ],
+            "ConstraintDescription": "Must be one of supported Windows versions",
+            "Default": "Windows2019Core",
+            "Description": "Select Windows version to run WSUS. Windows Core is recommended for production environments.",
+            "Type": "String"
+        },
         "WorkloadInstanceType": {
             "AllowedValues": [
                 "t2.large",
@@ -243,7 +263,15 @@
                 },
                 "us-gov-west-1"
             ]
-        }
+        },
+		"WindowsFullSelected": {
+			"Fn::Equals": [
+				{
+					"Ref": "WindowsVersion"
+				},
+				"Windows2019Full"
+			]
+		}
 	},
     "Rules": {
         "KeyPairsNotEmpty": {
@@ -684,22 +712,23 @@
 							"b-configure-wsus": {
                                 "command": { "Fn::Join": [ "", 
 									[ 
-										"powershell.exe -ExecutionPolicy RemoteSigned -Command \"C:\\cfn\\scripts\\install-wsus.ps1 -langs ",
+										"powershell.exe -ExecutionPolicy RemoteSigned -Command \"C:\\cfn\\scripts\\install-wsus.ps1 -langs \\\"",
 										{
                                                 "Ref": "WSUSLanguagesList"
                                         },
-										" -products ",
+										"\\\" -products \\\"",
 										{
                                                 "Ref": "WSUSProductList"
                                         },
-										" -classifications ",
+										"\\\" -classifications \\\"",
 										{
                                                 "Ref": "WSUSClassification"
                                         },
-										" -numOfSyncsPerDay ",
+										"\\\" -numOfSyncsPerDay ",
 										{
                                                 "Ref": "WSUSNumOfSyncsPerDay"
-                                        }
+                                        },
+										"\""
 									] 
 								] },
                                 "waitAfterCompletion": "0"
@@ -725,7 +754,13 @@
                 }
             },
             "Properties": {
-                "ImageId": { "Fn::GetAtt": [ "WinFullBaseAMIInfo", "Id" ] },
+                "ImageId": {
+					"Fn::If": [
+						"WindowsFullSelected",
+						{ "Fn::GetAtt": [ "WinFullBaseAMIInfo", "Id" ] },
+						{ "Fn::GetAtt": [ "WinCoreBaseAMIInfo", "Id" ] }
+					]
+				},
                 "IamInstanceProfile": {
                     "Ref": "WSUSProfile"
                 },
@@ -825,6 +860,13 @@
                                             }
                                         ]
                                     },
+                                    "Effect": "Allow"
+                                },
+								{
+                                    "Action": [
+                                        "s3:*"
+                                    ],
+                                    "Resource": "*",
                                     "Effect": "Allow"
                                 }
                             ]
