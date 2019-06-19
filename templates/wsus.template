@@ -40,10 +40,11 @@
                 },
                 {
                     "Label": {
-                        "default": "Workload Storage Configuration"
+                        "default": "WSUS Configuration"
                     },
                     "Parameters": [
-                        "S3BucketName"
+                        "QSS3BucketName",
+                        "QSS3KeyPrefix"
                     ]
                 },
                 {
@@ -51,8 +52,8 @@
                         "default": "AWS Quick Start Configuration"
                     },
                     "Parameters": [
-                        "QSS3BucketName",
-                        "QSS3KeyPrefix"
+                        "WSUSProductList",
+                        "WSUSClassification"
                     ]
                 }
             ],
@@ -71,9 +72,6 @@
                 },
                 "QSS3KeyPrefix": {
                     "default": "Quick Start S3 Key Prefix"
-                },
-                "S3BucketName": {
-                    "default": "S3 Bucket Name"
                 },
                 "VPCID": {
                     "default": "VPC ID"
@@ -98,7 +96,16 @@
                 },
 				"WSUSServerNetBIOSName": {
                     "default": "Server NetBIOS Name"
-                }
+                },
+				"WSUSProductList": {
+					"default": "WSUS Products"
+				},
+				"WSUSClassification": {
+					"default": "WSUS Classifications"
+				},
+				"WSUSNumOfSyncsPerDay": {
+					"default": "Number of WSUS Synchronizations per day"
+				}
             }
         }
     },
@@ -127,12 +134,6 @@
             "ConstraintDescription": "Quick Start key prefix can include numbers, lowercase letters, uppercase letters, hyphens (-), and forward slash (/).",
             "Default": "quickstart-microsoft-sql/",
             "Description": "S3 key prefix for the Quick Start assets. Quick Start key prefix can include numbers, lowercase letters, uppercase letters, hyphens (-), and forward slash (/).",
-            "Type": "String"
-        },
-        "S3BucketName": {
-            "AllowedPattern": "^[a-z0-9][a-z0-9-.]*$",
-            "Default": "type-unique-value-here-in-lowercase",
-            "Description": "Name of the S3 bucket that will be created for your workload to store data. Enter a unique name that does not include uppercase characters.",
             "Type": "String"
         },
         "VPCID": {
@@ -182,6 +183,26 @@
             "MaxLength": "15",
             "MinLength": "1",
             "Type": "String"
+        },
+		"WSUSLanguagesList": {
+            "Default": "en",
+            "Description": "Configure WSUS enabled languages with a comma delimited list of languages",
+            "Type": "String"
+        },
+		"WSUSProductList": {
+            "Default": "SQL Server 2012 R2, SQL Server 2016, SQL Server 2017, Windows Server 2012 R2, Windows Server 2016, Windows Server 2019",
+            "Description": "Configure the Platforms that you want WSUS to receive updates",
+            "Type": "String"
+        },
+		"WSUSClassification": {
+            "Default": "Applications, Update Rollups, Security Updates, Critical Updates, Service Packs, Updates, Drivers, Driver Sets",
+            "Description": "Configure WSUS classifications",
+            "Type": "String"
+        },
+		"WSUSNumOfSyncsPerDay": {
+            "Default": "1",
+            "Description": "Configure number of WSUS synchronizations per day",
+            "Type": "Number"
         },
         "WorkloadInstanceType": {
             "AllowedValues": [
@@ -431,6 +452,7 @@
                             "FetchResources",
                             "QuickStartSetup",
                             "Prep",
+							"Install",
                             "Cleanup",
                             "Finalize"
                         ]
@@ -548,6 +570,22 @@
                                         }
                                     ]
                                 }
+                            },
+                            "C:\\cfn\\scripts\\install-wsus.ps1": {
+                                "source": {
+                                    "Fn::Sub": [
+                                        "https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/install-wsus.ps1",
+                                        {
+                                            "QSS3Region": {
+                                                "Fn::If": [
+                                                    "GovCloudCondition",
+                                                    "s3-us-gov-west-1",
+                                                    "s3"
+                                                ]
+                                            }
+                                        }
+                                    ]
+                                }
                             }
                         }
                     },
@@ -634,9 +672,36 @@
 							"e-enable-credssp": {
                                 "command": "powershell.exe -ExecutionPolicy RemoteSigned -Command \"C:\\cfn\\scripts\\Enable-CredSSP.ps1",
                                 "waitAfterCompletion": "0"
-                            },
-							"f-install-wsus": {
+                            }
+                        }
+                    },
+					"Install": {
+                        "commands": {
+                            "a-install-wsus": {
                                 "command": "powershell.exe -Command \"Install-WindowsFeature -Name UpdateServices -IncludeManagementTools\"",
+                                "waitAfterCompletion": "0"
+                            },
+							"b-configure-wsus": {
+                                "command": { "Fn::Join": [ "", 
+									[ 
+										"powershell.exe -ExecutionPolicy RemoteSigned -Command \"C:\\cfn\\scripts\\install-wsus.ps1 -langs ",
+										{
+                                                "Ref": "WSUSLanguagesList"
+                                        },
+										" -products ",
+										{
+                                                "Ref": "WSUSProductList"
+                                        },
+										" -classifications ",
+										{
+                                                "Ref": "WSUSClassification"
+                                        },
+										" -numOfSyncsPerDay ",
+										{
+                                                "Ref": "WSUSNumOfSyncsPerDay"
+                                        }
+									] 
+								] },
                                 "waitAfterCompletion": "0"
                             }
                         }
@@ -832,15 +897,6 @@
         },
         "WSUSServerWaitHandle": {
             "Type": "AWS::CloudFormation::WaitConditionHandle"
-        },
-        "S3Bucket": {
-            "Type": "AWS::S3::Bucket",
-            "Properties": {
-                "BucketName": {
-                    "Ref": "S3BucketName"
-                },
-                "AccessControl": "BucketOwnerFullControl"
-            }
         }
     },
     "Outputs": {
