@@ -238,6 +238,17 @@ Rules:
         - Fn::RefAll: AWS::EC2::VPC::Id
       AssertDescription: All subnets must in the VPC
 Resources:
+  ADAdminSecrets:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: !Sub 'AWSQuickStart/${AWS::StackName}/ADAdminSecrets'
+      Description: Active Directory administrator Credentials for Quick Start
+      SecretString: !Sub '{ "username" : "${DomainAdminUser}", "password" : "${DomainAdminPassword}" }'
+  QuickStartLogs:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      LogGroupName: !Sub '/aws/Quick_Start/${AWS::StackName}'
+      RetentionInDays: 30
   WinFullBaseAMIInfo:
     Type: Custom::WinFullBaseAMIInfo
     Properties:
@@ -391,183 +402,234 @@ Resources:
             Action:
             - ec2:DescribeImages
             Resource: "*"
+  AWSQuickstartWSUSRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Policies:
+        - PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Action:
+                  - s3:GetObject
+                  - s3:ListBucket
+                Resource: 
+                  - !Sub 'arn:${AWS::Partition}:s3:::${QSS3BucketName}/${QSS3KeyPrefix}*'
+                  - !Sub 'arn:${AWS::Partition}:s3:::${QSS3BucketName}'
+                Effect: Allow
+          PolicyName: aws-quick-start-s3-policy
+        - PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - cloudformation:SignalResource
+                Resource: !Sub 'arn:${AWS::Partition}:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/${AWS::StackName}/*'
+              - Effect: Allow
+                Action:
+                  - ec2:DescribeInstances
+                  - ec2:DescribeInstanceStatus
+                  - ssm:*
+                Resource: '*'
+          PolicyName: WSUS-SSM-AutomationExecution
+      Path: /
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action:
+              - sts:AssumeRole
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+                - ssm.amazonaws.com
+            Effect: Allow
+        Version: '2012-10-17'
+  WSUSAutomation:
+    Type: AWS::SSM::Document
+    Properties:
+      DocumentType: Automation
+      Content:
+        schemaVersion: "0.3"
+        description: Deploy WSUS with SSM Automation
+        # Role that is utilized to perform the steps within the Automation Document.
+        assumeRole: "{{AutomationAssumeRole}}"
+        # Gathering parameters needed to configure DCs in the Quick Start
+        parameters:
+          DomainDNSName: 
+            default: !Sub "${DomainDNSName}"
+            description: "Fully qualified domain name (FQDN) of the forest root domain e.g. example.com"
+            type: "String"
+          DomainNetBIOSName: 
+            default: !Sub "${DomainNetBIOSName}"
+            description: "NetBIOS name of the domain (up to 15 characters) for users of earlier versions of Windows e.g. EXAMPLE"
+            type: "String"
+          AdminSecrets: 
+            default: !Sub "${ADAdminSecrets}"
+            description: "Domain admin credentials"
+            type: "String"
+          WSUSInstanceId: 
+            default: ""
+            description: "ID of the WSUS instance"
+            type: "String"
+          StackName: 
+            default: !Sub "${AWS::StackName}"
+            description: "CloudFormation stack name"
+            type: "String"
+          AutomationAssumeRole:
+            default: ""
+            description: "(Optional) The ARN of the role that allows Automation to perform the actions on your behalf."
+            type: "String"
+          WSUSLanguagesList:
+            default: !Sub "${WSUSLanguagesList}"
+            description: "Configure WSUS enabled languages with a comma delimited list of languages."
+            type: "String"
+          WSUSProductList:
+            default: !Sub "${WSUSProductList}"
+            description: "Configure the Platforms that you want WSUS to receive updates."
+            type: "String"
+          WSUSClassification:
+            default: !Sub "${WSUSClassification}"
+            description: "Configure WSUS classifications."
+            type: "String"
+          WSUSNumOfSyncsPerDay:
+            default: !Sub "${WSUSNumOfSyncsPerDay}"
+            description: "Configure number of WSUS synchronizations per day."
+            type: "String"
+        mainSteps:
+        - name: "InitializeDisk"
+          action: "aws:runCommand"
+          onFailure: "step:signalfailure"
+          inputs:
+            DocumentName: AWS-RunPowerShellScript
+            InstanceIds: 
+              - "{{WSUSInstanceId}}"
+            CloudWatchOutputConfig:
+              CloudWatchOutputEnabled: "true"
+              CloudWatchLogGroupName: !Ref 'QuickStartLogs'
+            Parameters:
+              commands: 
+                - |
+                   C:\ProgramData\Amazon\EC2-Windows\Launch\Scripts\InitializeDisks.ps1
+        - name: "RenameComputer"
+          action: "aws:runCommand"
+          onFailure: "step:signalfailure"
+          inputs:
+            DocumentName: "AWS-RunPowerShellScript"
+            InstanceIds:
+              - "{{WSUSInstanceId}}"
+            CloudWatchOutputConfig:
+              CloudWatchOutputEnabled: "true"
+              CloudWatchLogGroupName: !Ref 'QuickStartLogs'
+            Parameters:
+              commands: !Sub "Rename-Computer -Restart -NewName '${WSUSServerNetBIOSName}'"
+        - name: "DomainJoin"
+          action: "aws:runCommand"
+          onFailure: "step:signalfailure"
+          inputs:
+            DocumentName: "AWS-RunRemoteScript"
+            InstanceIds:
+              - "{{WSUSInstanceId}}"
+            CloudWatchOutputConfig:
+              CloudWatchOutputEnabled: "true"
+              CloudWatchLogGroupName: !Ref 'QuickStartLogs'
+            Parameters:
+              sourceType: "S3"
+              sourceInfo: !Sub ['{"path": "https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/DomainJoin.ps1"}',
+                  {QSS3Region: !If [GovCloudCondition, s3-us-gov-west-1, s3]}]
+              commandLine: "./DomainJoin.ps1 -DomainNetBIOSName '{{DomainNetBIOSName}}' -DomainDNSName '{{DomainDNSName}}' -AdminSecret '{{AdminSecrets}}'"
+        - name: "RestartComputer"
+          action: "aws:runCommand"
+          onFailure: "step:signalfailure"
+          inputs:
+            DocumentName: AWS-RunPowerShellScript
+            InstanceIds: 
+              - "{{WSUSInstanceId}}"
+            CloudWatchOutputConfig:
+              CloudWatchOutputEnabled: "true"
+              CloudWatchLogGroupName: !Ref 'QuickStartLogs'
+            Parameters:
+              commands: 
+                - Restart-Computer
+        - name: "InstallWSUS"
+          action: "aws:runCommand"
+          onFailure: "step:signalfailure"
+          inputs:
+            DocumentName: AWS-RunPowerShellScript
+            InstanceIds: 
+              - "{{WSUSInstanceId}}"
+            CloudWatchOutputConfig:
+              CloudWatchOutputEnabled: "true"
+              CloudWatchLogGroupName: !Ref 'QuickStartLogs'
+            Parameters:
+              commands: 
+                - Install-WindowsFeature -Name UpdateServices -IncludeManagementTools
+        - name: "ConfigureWSUS"
+          action: "aws:runCommand"
+          onFailure: "step:signalfailure"
+          inputs:
+            DocumentName: "AWS-RunRemoteScript"
+            InstanceIds:
+              - "{{WSUSInstanceId}}"
+            CloudWatchOutputConfig:
+              CloudWatchOutputEnabled: "true"
+              CloudWatchLogGroupName: !Ref 'QuickStartLogs'
+            Parameters:
+              sourceType: "S3"
+              sourceInfo: !Sub ['{"path": "https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/install-wsus.ps1"}',
+                  {QSS3Region: !If [GovCloudCondition, s3-us-gov-west-1, s3]}]
+              commandLine: "./install-wsus.ps1 -langs '{{WSUSLanguagesList}}' -products '{{WSUSProductList}}' -classifications '{{WSUSClassification}}' -numOfSyncsPerDay {{WSUSNumOfSyncsPerDay}}"
+        # Determines if CFN Needs to be Signaled or if Work flow should just end
+        - name: CFNSignalEnd
+          action: aws:branch
+          inputs:
+            Choices:
+            - NextStep: signalsuccess
+              Not: 
+                Variable: "{{StackName}}"
+                StringEquals: ""
+            - NextStep: sleepend
+              Variable: "{{StackName}}"
+              StringEquals: ""
+        # If all steps complete successfully signals CFN of Success
+        - name: "signalsuccess"
+          action: "aws:executeAwsApi"
+          isEnd: True
+          inputs:
+            Service: cloudformation
+            Api: SignalResource
+            LogicalResourceId: "SSMWaitCondition"
+            StackName: "{{StackName}}"
+            Status: SUCCESS
+            UniqueId: "{{WSUSInstanceId}}"
+        # If CFN Signl Not Needed this sleep ends work flow
+        - name: "sleepend"
+          action: "aws:sleep"
+          isEnd: True
+          inputs:
+            Duration: PT1S
+        # If any steps fails signals CFN of Failure
+        - name: "signalfailure"
+          action: "aws:executeAwsApi"
+          inputs:
+            Service: cloudformation
+            Api: SignalResource
+            LogicalResourceId: "SSMWaitCondition"
+            StackName: "{{StackName}}"
+            Status: FAILURE
+            UniqueId: "{{WSUSInstanceId}}"
+  WSUSSSMPassRolePolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: WSUS-SSM-PassRole
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - iam:PassRole
+            Resource: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:role/${AWSQuickstartWSUSRole}'
+      Roles:
+        - !Ref 'AWSQuickstartWSUSRole'
   WSUSInstance:
     Type: AWS::EC2::Instance
-    Metadata:
-      AWS::CloudFormation::Authentication:
-        S3AccessCreds:
-          type: S3
-          roleName:
-            Ref: WSUSRole
-          buckets:
-          - Ref: QSS3BucketName
-      AWS::CloudFormation::Init:
-        configSets:
-          config:
-          - FetchResources
-          - QuickStartSetup
-          - Prep
-          - Install
-          - Cleanup
-          - Finalize
-        FetchResources:
-          files:
-            C:\cfn\scripts\Unzip-Archive.ps1:
-              source:
-                Fn::Sub:
-                - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}submodules/quickstart-microsoft-utilities/scripts/Unzip-Archive.ps1
-                - QSS3Region:
-                    Fn::If:
-                    - GovCloudCondition
-                    - s3-us-gov-west-1
-                    - s3
-            C:\cfn\modules\AWSQuickStart.zip:
-              source:
-                Fn::Sub:
-                - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}submodules/quickstart-microsoft-utilities/modules/AWSQuickStart.zip
-                - QSS3Region:
-                    Fn::If:
-                    - GovCloudCondition
-                    - s3-us-gov-west-1
-                    - s3
-            C:\cfn\scripts\Join-Domain.ps1:
-              source:
-                Fn::Sub:
-                - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}submodules/quickstart-microsoft-utilities/scripts/Join-Domain.ps1
-                - QSS3Region:
-                    Fn::If:
-                    - GovCloudCondition
-                    - s3-us-gov-west-1
-                    - s3
-            C:\cfn\scripts\Rename-Computer.ps1:
-              source:
-                Fn::Sub:
-                - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}submodules/quickstart-microsoft-utilities/scripts/Rename-Computer.ps1
-                - QSS3Region:
-                    Fn::If:
-                    - GovCloudCondition
-                    - s3-us-gov-west-1
-                    - s3
-            C:\cfn\scripts\Restart-Computer.ps1:
-              source:
-                Fn::Sub:
-                - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}submodules/quickstart-microsoft-utilities/scripts/Restart-Computer.ps1
-                - QSS3Region:
-                    Fn::If:
-                    - GovCloudCondition
-                    - s3-us-gov-west-1
-                    - s3
-            C:\cfn\scripts\Enable-CredSSP.ps1:
-              source:
-                Fn::Sub:
-                - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}submodules/quickstart-microsoft-utilities/scripts/Enable-CredSSP.ps1
-                - QSS3Region:
-                    Fn::If:
-                    - GovCloudCondition
-                    - s3-us-gov-west-1
-                    - s3
-            C:\cfn\scripts\Disable-CredSSP.ps1:
-              source:
-                Fn::Sub:
-                - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}submodules/quickstart-microsoft-utilities/scripts/Disable-CredSSP.ps1
-                - QSS3Region:
-                    Fn::If:
-                    - GovCloudCondition
-                    - s3-us-gov-west-1
-                    - s3
-            C:\cfn\scripts\install-wsus.ps1:
-              source:
-                Fn::Sub:
-                - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/install-wsus.ps1
-                - QSS3Region:
-                    Fn::If:
-                    - GovCloudCondition
-                    - s3-us-gov-west-1
-                    - s3
-        QuickStartSetup:
-          commands:
-            a-set-execution-policy:
-              command: powershell.exe -Command "Set-ExecutionPolicy RemoteSigned -Force"
-              waitAfterCompletion: '0'
-            b-unpack-quickstart-module:
-              command: powershell.exe -Command C:\cfn\scripts\Unzip-Archive.ps1 -Source
-                C:\cfn\modules\AWSQuickStart.zip -Destination C:\Windows\system32\WindowsPowerShell\v1.0\Modules\
-              waitAfterCompletion: '0'
-            c-init-quickstart-module:
-              command:
-                Fn::Join:
-                - ''
-                - - powershell.exe -Command "
-                  - New-AWSQuickStartWaitHandle -Handle '
-                  - Ref: WSUSServerWaitHandle
-                  - '''"'
-              waitAfterCompletion: '0'
-        Prep:
-          commands:
-            a-initialize-disks:
-              command: powershell.exe -Command "C:\ProgramData\Amazon\EC2-Windows\Launch\Scripts\InitializeDisks.ps1"
-              waitAfterCompletion: '0'
-            b-rename-computer:
-              command:
-                Fn::Join:
-                - ''
-                - - powershell.exe -Command "C:\cfn\scripts\Rename-Computer.ps1 -Restart
-                    -NewName '
-                  - Ref: WSUSServerNetBIOSName
-                  - '''"'
-              waitAfterCompletion: forever
-            c-join-domain:
-              command:
-                Fn::Join:
-                - ''
-                - - powershell.exe -Command "C:\cfn\scripts\Join-Domain.ps1 -DomainName
-                    '
-                  - Ref: DomainDNSName
-                  - "' -UserName '"
-                  - Ref: DomainNetBIOSName
-                  - "\\"
-                  - Ref: DomainAdminUser
-                  - "' -Password '"
-                  - Ref: DomainAdminPassword
-                  - '''"'
-              waitAfterCompletion: forever
-            d-reboot:
-              command: powershell.exe -Command "C:\cfn\scripts\Restart-Computer.ps1"
-              waitAfterCompletion: forever
-            e-enable-credssp:
-              command: powershell.exe -ExecutionPolicy RemoteSigned -Command "C:\cfn\scripts\Enable-CredSSP.ps1
-              waitAfterCompletion: '0'
-        Install:
-          commands:
-            a-install-wsus:
-              command: powershell.exe -Command "Install-WindowsFeature -Name UpdateServices
-                -IncludeManagementTools"
-              waitAfterCompletion: '0'
-            b-configure-wsus:
-              command:
-                Fn::Join:
-                - ''
-                - - powershell.exe -ExecutionPolicy RemoteSigned -Command "C:\cfn\scripts\install-wsus.ps1
-                    -langs \"
-                  - Ref: WSUSLanguagesList
-                  - \" -products \"
-                  - Ref: WSUSProductList
-                  - \" -classifications \"
-                  - Ref: WSUSClassification
-                  - '\" -numOfSyncsPerDay '
-                  - Ref: WSUSNumOfSyncsPerDay
-                  - "\""
-              waitAfterCompletion: '0'
-        Cleanup:
-          commands:
-            a-disable-credssp:
-              command: powershell.exe -ExecutionPolicy RemoteSigned -Command "C:\cfn\scripts\Disable-CredSSP.ps1"
-              waitAfterCompletion: '0'
-        Finalize:
-          commands:
-            a-signal-success:
-              command: powershell -Command "Write-AWSQuickStartStatus"
-              waitAfterCompletion: '0'
     Properties:
       ImageId:
         Fn::If:
@@ -606,17 +668,24 @@ Resources:
       KeyName:
         Ref: KeyPairName
       UserData:
-        Fn::Base64:
-          Fn::Join:
+      UserData: !Base64
+        Fn::Join:
           - ''
-          - - "<script>\n"
-            - 'cfn-init.exe -v -c config -s '
-            - Ref: AWS::StackId
-            - " -r WSUSInstance "
-            - " --region "
-            - Ref: AWS::Region
+          - - "<powershell>\n"
+            - "New-Item -Path C:\\ -Name log -ItemType Directory \n"
+            - "$transcriptPath = 'C:\\log\\user-data-transcript.txt' \n"
+            - "Start-Transcript $transcriptPath \n"
+            - "$instanceId = (New-Object System.Net.WebClient).DownloadString('http://169.254.169.254/latest/meta-data/instance-id')\n"
+            - 'Start-SSMAutomationExecution -DocumentName '
+            - !Sub '"${WSUSAutomation}"'
+            - ' -Parameter @{'
+            - '"WSUSInstanceId"='
+            - "$instanceId"
+            - ';"AutomationAssumeRole"='
+            - !Sub '"arn:aws:iam::${AWS::AccountId}:role/${AWSQuickstartWSUSRole}"'
+            - '}'
             - "\n"
-            - "</script>"
+            - "</powershell>\n"
   WSUSRole:
     Type: AWS::IAM::Role
     Properties:
@@ -640,6 +709,30 @@ Resources:
             Resource: "*"
             Effect: Allow
         PolicyName: aws-quick-start-s3-policy
+      - PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - secretsmanager:GetSecretValue
+                - secretsmanager:DescribeSecret
+              Resource: 
+                - !Ref 'ADAdminSecrets'
+            - Effect: Allow
+              Action:
+                - ssm:StartAutomationExecution
+              Resource: '*'
+        PolicyName: QS-WSUS-SSM
+      - PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - iam:PassRole
+              Resource: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:role/${AWSQuickstartWSUSRole}'
+        PolicyName: QS-WSUS-SSM-PassRole
+      ManagedPolicyArns:
+      - "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
       Path: "/"
       AssumeRolePolicyDocument:
         Statement:
@@ -656,6 +749,20 @@ Resources:
       Roles:
       - Ref: WSUSRole
       Path: "/"
+  SSMWaitHandle: 
+    Type: AWS::CloudFormation::WaitConditionHandle
+  SSMWaitCondition: 
+    Type: AWS::CloudFormation::WaitCondition
+    CreationPolicy:
+      ResourceSignal:
+        Timeout: PT120M
+        Count: 1
+    DependsOn: "WSUSInstance"
+    Properties: 
+      Handle: 
+        Ref: "SSMWaitHandle"
+      Timeout: "7200"
+      Count: 1
   WorkloadSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -671,13 +778,4 @@ Resources:
         FromPort: '8531'
         ToPort: '8531'
         CidrIp: 10.0.0.0/0
-  WSUSServerWaitCondition:
-    Type: AWS::CloudFormation::WaitCondition
-    DependsOn: WSUSInstance
-    Properties:
-      Handle:
-        Ref: WSUSServerWaitHandle
-      Timeout: '3600'
-  WSUSServerWaitHandle:
-    Type: AWS::CloudFormation::WaitConditionHandle
 Outputs: {}
