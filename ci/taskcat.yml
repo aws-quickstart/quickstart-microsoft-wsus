@@ -20,8 +20,7 @@ global:
  
 tests:
   quickstart-microsoft-wsust1:
-    parameter_input: quickstart-microsoft-wsus-example-params1.json
-    template_file: quickstart-microsoft-wsus-example1.template
-  quickstart-microsoft-wsust2:
-    parameter_input: quickstart-microsoft-wsus-example-params2.json
-    template_file: quickstart-microsoft-wsus-example2.template
+    parameter_input: quickstart-microsoft-wsus-params1.json
+    template_file: quickstart-microsoft-wsus-master.template
+    regions:
+    - us-east-1
