@@ -584,29 +584,6 @@ Resources:
             Parameters:
               commands: 
                 - Install-WindowsFeature -Name UpdateServices -IncludeManagementTools
-        - name: "BranchMSSQL"
-          action: aws:branch
-          inputs:
-            Choices:
-            - NextStep: MigrateSUSDB
-              Variable: "{{WindowsVersion}}"
-              Contains: "MSSQL"
-            Default: "ConfigureWSUS"
-        - name: "MigrateSUSDB"
-          action: "aws:runCommand"
-          onFailure: "step:signalfailure"
-          inputs:
-            DocumentName: "AWS-RunRemoteScript"
-            InstanceIds:
-              - "{{WSUSInstanceId}}"
-            CloudWatchOutputConfig:
-              CloudWatchOutputEnabled: "true"
-              CloudWatchLogGroupName: !Ref 'QuickStartLogs'
-            Parameters:
-              sourceType: "S3"
-              sourceInfo: !Sub ['{"path": "https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/migrate-susdb.ps1"}',
-                  {QSS3Region: !If [GovCloudCondition, s3-us-gov-west-1, s3]}]
-              commandLine: "./migrate-susdb.ps1"
         - name: "ConfigureWSUS"
           action: "aws:runCommand"
           onFailure: "step:signalfailure"
@@ -622,6 +599,30 @@ Resources:
               sourceInfo: !Sub ['{"path": "https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/install-wsus.ps1"}',
                   {QSS3Region: !If [GovCloudCondition, s3-us-gov-west-1, s3]}]
               commandLine: "./install-wsus.ps1 -langs '{{WSUSLanguagesList}}' -products '{{WSUSProductList}}' -classifications '{{WSUSClassification}}' -numOfSyncsPerDay {{WSUSNumOfSyncsPerDay}}"
+        - name: "BranchMSSQL"
+          action: aws:branch
+          inputs:
+            Choices:
+            - NextStep: MigrateSUSDB
+              Variable: "{{WindowsVersion}}"
+              Contains: "MSSQL"
+            Default: "CFNSignalEnd"
+        - name: "MigrateSUSDB"
+          action: "aws:runCommand"
+          onFailure: "step:signalfailure"
+          inputs:
+            DocumentName: "AWS-RunRemoteScript"
+            InstanceIds:
+              - "{{WSUSInstanceId}}"
+            CloudWatchOutputConfig:
+              CloudWatchOutputEnabled: "true"
+              CloudWatchLogGroupName: !Ref 'QuickStartLogs'
+            Parameters:
+              sourceType: "S3"
+              sourceInfo: !Sub ['{"path": "https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/migrate-susdb.ps1"}',
+                  {QSS3Region: !If [GovCloudCondition, s3-us-gov-west-1, s3]}]
+              commandLine: "./migrate-susdb.ps1"
+
         # Determines if CFN Needs to be Signaled or if Work flow should just end
         - name: CFNSignalEnd
           action: aws:branch
