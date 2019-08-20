@@ -1,0 +1,1 @@
+powershell.exe -Command "C:\\cfn\\scripts\\Install-WSUS.ps1"
