@@ -481,16 +481,9 @@
                         }
                     },
                     "rename": {
-                        "commands": {
+                        "command": {
                             "1-execute-powershell-script-rename-computer": {
-                                "command": {
-                                    "Fn::Join": [
-                                        "",
-                                        [
-                                            "powershell.exe -Command \"Rename-Computer -NewName 'WSUS' -Restart\""
-                                        ]
-                                    ]
-                                },
+                                "command": "powershell.exe -Command Rename-Computer -NewName 'WSUS' -Restart",
                                 "waitAfterCompletion": "forever"
                             }
                         }

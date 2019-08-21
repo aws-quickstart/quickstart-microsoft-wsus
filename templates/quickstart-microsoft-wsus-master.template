@@ -518,7 +518,7 @@
         },
         "WSUSStack": {
             "Type": "AWS::CloudFormation::Stack",
-            "DependsOn": "VPCStack",
+            "DependsOn": "ADStack",
             "Properties": {
                 "TemplateURL": {
                     "Fn::Sub": [
