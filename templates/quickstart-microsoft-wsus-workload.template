@@ -483,7 +483,13 @@
                     "rename": {
                         "command": {
                             "1-execute-powershell-script-rename-computer": {
-                                "command": "powershell.exe -Command Rename-Computer -NewName 'WSUS' -Restart",
+                                "command": {
+                                    "Fn::Join": [
+                                        "",
+                                        [
+                                            "powershell.exe -Command \"Rename-Computer -NewName 'WSUS' -Restart\"",
+                                        ]
+                                    ]
                                 "waitAfterCompletion": "forever"
                             }
                         }
@@ -539,7 +545,7 @@
                             }
                         }
                     },
-                    "install-wsus": {
+                    "installWSUS": {
                         "commands": {
                             "1-execute-powershell-script-install-wsus": {
                                 "command": {
@@ -547,6 +553,28 @@
                                         "",
                                         [
                                             "powershell.exe -Command \"Install-WindowsFeature -Name UpdateServices -IncludeManagementTools\""
+                                        ]
+                                    ]
+                                },
+                                "waitAfterCompletion": "forever"
+                            },
+                            "2-execute-powershell-script-create-directory": {
+                                "command": {
+                                    "Fn::Join": [
+                                        "",
+                                        [
+                                            "powershell.exe -Command \"New-Item -Path C: -Name WSUS -ItemType Directory\""
+                                        ]
+                                    ]
+                                },
+                                "waitAfterCompletion": "forever"
+                            },
+                            "3-execute-powershell-script-set-wsus-path": {
+                                "command": {
+                                    "Fn::Join": [
+                                        "",
+                                        [
+                                            "powershell.exe -Command \"'C:\Program Files\Update Services\Tools\wsusutil.exe' postinstall CONTENT_DIR=C:\WSUS\""
                                         ]
                                     ]
                                 },
