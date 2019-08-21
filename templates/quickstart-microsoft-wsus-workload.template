@@ -546,39 +546,14 @@
                             }
                         }
                     },
-                    "installWSUS": {
+                    "install-wsus": {
                         "commands": {
-                            "a-enable-autologon-and-set-startup-script": {
+                            "1-execute-powershell-script-install-wsus": {
                                 "command": {
                                     "Fn::Join": [
                                         "",
                                         [
-                                            "powershell.exe -Command \"C:\\cfn\\scripts\\Enable-AutoLogon.ps1",
-                                            " -UserName '",
-                                            {
-                                                "Ref": "DomainAdminUser"
-                                            },
-                                            "@",
-                                            {
-                                                "Ref": "DomainDNSName"
-                                            },
-                                            "' -Password '",
-                                            {
-                                                "Ref": "DomainAdminPassword"
-                                            },
-                                            "' -StartupScript 'C:\\cfn\\scripts\\InstallWSUS.bat'",
-                                            "\""
-                                        ]
-                                    ]
-                                },
-                                "waitAfterCompletion": "0"
-                            },
-                            "b-reboot": {
-                                "command": {
-                                    "Fn::Join": [
-                                        "",
-                                        [
-                                            "powershell.exe -Command Restart-Computer -Force"
+                                            "powershell.exe -Command \"Install-WindowsFeature -Name UpdateServices -IncludeManagementTools\""
                                         ]
                                     ]
                                 },
@@ -613,7 +588,7 @@
                 "Tags": [
                     {
                         "Key": "Name",
-                        "Value": "SPAPP1"
+                        "Value": "WSUS"
                     }
                 ],
                 "BlockDeviceMappings": [
@@ -649,7 +624,7 @@
                                 {
                                     "Ref": "AWS::StackId"
                                 },
-                                " -r SPAPP1",
+                                " -r WSUS",
                                 " --region ",
                                 {
                                     "Ref": "AWS::Region"

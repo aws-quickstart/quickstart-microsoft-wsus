@@ -420,7 +420,7 @@
                             }
                         }
                     },
-                                       "installWSUS": {
+                    "installWSUS": {
                         "commands": {
                             "a-enable-autologon-and-set-startup-script": {
                                 "command": {
@@ -476,7 +476,6 @@
                     }
                 }
             },
-    
             "Properties": {
                 "ImageId": {
                     "Ref": "LatestAmiId"
