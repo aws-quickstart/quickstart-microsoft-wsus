@@ -257,7 +257,7 @@
                 "Handle": {
                     "Ref": "WSUSWaitHandle"
                 },
-                "Timeout": "3600"
+                "Timeout": "1800"
             }
         },
         "WSUSWaitHandle": {
@@ -418,6 +418,23 @@
                                 },
                                 "authentication": "S3AccessCreds"
                             },
+                            "C:\\cfn\\scripts\\set-path.ps1": {
+                                "source": {
+                                    "Fn::Sub": [
+                                        "https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/set-path.ps1",
+                                        {
+                                            "QSS3Region": {
+                                                "Fn::If": [
+                                                    "GovCloudCondition",
+                                                    "s3-us-gov-west-1",
+                                                    "s3"
+                                                ]
+                                            }
+                                        }
+                                    ]
+                                },
+                                "authentication": "S3AccessCreds"
+                            },
                             "C:\\cfn\\scripts\\Join-Domain.ps1": {
                                 "source": {
                                     "Fn::Sub": [
@@ -481,15 +498,16 @@
                         }
                     },
                     "rename": {
-                        "command": {
+                        "commands": {
                             "1-execute-powershell-script-rename-computer": {
                                 "command": {
                                     "Fn::Join": [
                                         "",
                                         [
-                                            "powershell.exe -Command \"Rename-Computer -NewName 'WSUS' -Restart\"",
+                                            "powershell.exe -Command \"Rename-Computer -NewName 'WSUS' -Restart\""
                                         ]
                                     ]
+                                },
                                 "waitAfterCompletion": "forever"
                             }
                         }
@@ -552,29 +570,7 @@
                                     "Fn::Join": [
                                         "",
                                         [
-                                            "powershell.exe -Command \"Install-WindowsFeature -Name UpdateServices -IncludeManagementTools\""
-                                        ]
-                                    ]
-                                },
-                                "waitAfterCompletion": "forever"
-                            },
-                            "2-execute-powershell-script-create-directory": {
-                                "command": {
-                                    "Fn::Join": [
-                                        "",
-                                        [
-                                            "powershell.exe -Command \"New-Item -Path C: -Name WSUS -ItemType Directory\""
-                                        ]
-                                    ]
-                                },
-                                "waitAfterCompletion": "forever"
-                            },
-                            "3-execute-powershell-script-set-wsus-path": {
-                                "command": {
-                                    "Fn::Join": [
-                                        "",
-                                        [
-                                            "powershell.exe -Command \"'C:\Program Files\Update Services\Tools\wsusutil.exe' postinstall CONTENT_DIR=C:\WSUS\""
+                                            "powershell.exe -Command \"C:\\cfn\\scripts\\Install-WSUS.ps1"
                                         ]
                                     ]
                                 },
