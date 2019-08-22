@@ -1,0 +1,21 @@
+-----------------------------------------------------------------------------
+Region: us-east-1
+StackName: tcat-qs-ci-quickstart-microsoft-wsust1-80cc5dd8
+*****************************************************************************
+ResourceStatusReason:  
+The following resource(s) failed to create: [VPCStack].
+*****************************************************************************
+*****************************************************************************
+Events:  
+TimeStamp                         ResourceStatus      ResourceType                LogicalResourceId                                ResourceStatusReason
+--------------------------------  ------------------  --------------------------  -----------------------------------------------  ---------------------------------------------------------------------------------------------
+2019-08-19 20:14:04.099000+00:00  CREATE_FAILED       AWS::CloudFormation::Stack  tcat-qs-ci-quickstart-microsoft-wsust1-80cc5dd8  The following resource(s) failed to create: [VPCStack].
+2019-08-19 20:14:03.129000+00:00  CREATE_FAILED       AWS::CloudFormation::Stack  VPCStack                                         S3 error: The specified key does not exist.
+                                                                                                                                   For more information check http://docs.aws.amazon.com/AmazonS3/latest/API/ErrorResponses.html
+2019-08-19 20:14:02.404000+00:00  CREATE_IN_PROGRESS  AWS::CloudFormation::Stack  VPCStack
+2019-08-19 20:13:56.115000+00:00  CREATE_IN_PROGRESS  AWS::CloudFormation::Stack  tcat-qs-ci-quickstart-microsoft-wsust1-80cc5dd8  User Initiated
+*****************************************************************************
+-----------------------------------------------------------------------------
+Tested on: Monday, 19. August 2019 03:14PM
+-----------------------------------------------------------------------------
+

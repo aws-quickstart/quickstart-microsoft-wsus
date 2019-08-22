@@ -1,0 +1,43 @@
+-----------------------------------------------------------------------------
+Region: us-east-1
+StackName: tcat-qs-ci-quickstart-microsoft-wsust1-a3bc14b7
+*****************************************************************************
+ResourceStatusReason:  
+The following resource(s) failed to create: [VPCStack].
+*****************************************************************************
+*****************************************************************************
+Events:  
+TimeStamp                         ResourceStatus      ResourceType                LogicalResourceId                                ResourceStatusReason
+--------------------------------  ------------------  --------------------------  -----------------------------------------------  -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+2019-08-20 17:52:37.686000+00:00  CREATE_FAILED       AWS::CloudFormation::Stack  tcat-qs-ci-quickstart-microsoft-wsust1-a3bc14b7  The following resource(s) failed to create: [VPCStack].
+2019-08-20 17:52:37.085000+00:00  CREATE_FAILED       AWS::CloudFormation::Stack  VPCStack                                         Embedded stack arn:aws:cloudformation:us-east-1:037498179568:stack/tcat-qs-ci-quickstart-microsoft-wsust1-a3bc14b7-VPCStack-E7YOCGLXVQWG/45453690-c373-11e9-bc04-0a33c80c982c was not successfully created: The following resource(s) failed to create: [InternetGateway, VPC].
+2019-08-20 17:52:26.522000+00:00  CREATE_IN_PROGRESS  AWS::CloudFormation::Stack  VPCStack                                         Resource creation Initiated
+2019-08-20 17:52:25.486000+00:00  CREATE_IN_PROGRESS  AWS::CloudFormation::Stack  VPCStack
+2019-08-20 17:52:20.525000+00:00  CREATE_IN_PROGRESS  AWS::CloudFormation::Stack  tcat-qs-ci-quickstart-microsoft-wsust1-a3bc14b7  User Initiated
+*****************************************************************************
+-----------------------------------------------------------------------------
+Tested on: Tuesday, 20. August 2019 12:52PM
+-----------------------------------------------------------------------------
+
+-----------------------------------------------------------------------------
+Region: us-east-1
+StackName: tcat-qs-ci-quickstart-microsoft-wsust1-a3bc14b7-VPCStack-E7YOCGLXVQWG
+*****************************************************************************
+ResourceStatusReason:  
+The following resource(s) failed to create: [InternetGateway, VPC].
+*****************************************************************************
+*****************************************************************************
+Events:  
+TimeStamp                         ResourceStatus      ResourceType                LogicalResourceId                                                      ResourceStatusReason
+--------------------------------  ------------------  --------------------------  ---------------------------------------------------------------------  --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+2019-08-20 17:52:33.425000+00:00  CREATE_FAILED       AWS::CloudFormation::Stack  tcat-qs-ci-quickstart-microsoft-wsust1-a3bc14b7-VPCStack-E7YOCGLXVQWG  The following resource(s) failed to create: [InternetGateway, VPC].
+2019-08-20 17:52:32.586000+00:00  CREATE_FAILED       AWS::EC2::InternetGateway   InternetGateway                                                        The maximum number of internet gateways has been reached. (Service: AmazonEC2; Status Code: 400; Error Code: InternetGatewayLimitExceeded; Request ID: 368d4074-dcc1-4ee8-be98-f777b18007ab)
+2019-08-20 17:52:32.242000+00:00  CREATE_IN_PROGRESS  AWS::EC2::InternetGateway   InternetGateway
+2019-08-20 17:52:31.902000+00:00  CREATE_FAILED       AWS::EC2::VPC               VPC                                                                    The maximum number of VPCs has been reached. (Service: AmazonEC2; Status Code: 400; Error Code: VpcLimitExceeded; Request ID: be0ca791-dcaf-49ea-bd1e-7b9f121ce92c)
+2019-08-20 17:52:31.469000+00:00  CREATE_IN_PROGRESS  AWS::EC2::VPC               VPC
+2019-08-20 17:52:26.319000+00:00  CREATE_IN_PROGRESS  AWS::CloudFormation::Stack  tcat-qs-ci-quickstart-microsoft-wsust1-a3bc14b7-VPCStack-E7YOCGLXVQWG  User Initiated
+*****************************************************************************
+-----------------------------------------------------------------------------
+Tested on: Tuesday, 20. August 2019 12:52PM
+-----------------------------------------------------------------------------
+
