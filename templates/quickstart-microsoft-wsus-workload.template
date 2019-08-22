@@ -574,7 +574,7 @@
                                         ]
                                     ]
                                 },
-                                "waitAfterCompletion": "forever"
+                                "waitAfterCompletion": "0"
                             }
                         }
                     },
