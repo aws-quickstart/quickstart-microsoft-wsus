@@ -336,7 +336,7 @@
                                             {
                                                 "Ref": "AWS::StackId"
                                             },
-                                            " -r WSUS",
+                                            " -r WSUS1",
                                             " --region ",
                                             {
                                                 "Ref": "AWS::Region"
@@ -614,7 +614,7 @@
                 "Tags": [
                     {
                         "Key": "Name",
-                        "Value": "WSUS"
+                        "Value": "WSUS1"
                     }
                 ],
                 "BlockDeviceMappings": [
@@ -650,7 +650,7 @@
                                 {
                                     "Ref": "AWS::StackId"
                                 },
-                                " -r WSUS",
+                                " -r WSUS1",
                                 " --region ",
                                 {
                                     "Ref": "AWS::Region"
@@ -724,7 +724,7 @@
                                             {
                                                 "Ref": "AWS::StackId"
                                             },
-                                            " -r WSUS",
+                                            " -r WSUS2",
                                             " --region ",
                                             {
                                                 "Ref": "AWS::Region"
@@ -1002,7 +1002,7 @@
                 "Tags": [
                     {
                         "Key": "Name",
-                        "Value": "WSUS"
+                        "Value": "WSUS2"
                     }
                 ],
                 "BlockDeviceMappings": [
@@ -1038,7 +1038,7 @@
                                 {
                                     "Ref": "AWS::StackId"
                                 },
-                                " -r WSUS",
+                                " -r WSUS2",
                                 " --region ",
                                 {
                                     "Ref": "AWS::Region"
