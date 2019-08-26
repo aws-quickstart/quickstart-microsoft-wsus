@@ -34,13 +34,15 @@
                         "DomainNetBIOSName"
                     ]
                 },
-                                {
+                {
                     "Label": {
                         "default": "Microsoft WSUS Configuration"
                     },
                     "Parameters": [
                         "WSUSInstanceType",
-                        "LatestAmiId"
+                        "LatestAmiId",
+                        "WSFCNode1NetBIOSName",
+                        "WSFCNode2NetBIOSName"
                     ]
                 },
                 {
@@ -113,6 +115,12 @@
                 },
                 "VPCCIDR": {
                     "default": "VPC CIDR"
+                },
+                "WSFCNode1NetBIOSName": {
+                    "default": "WSFCNode1"
+                },
+                "WSFCNode2NetBIOSName": {
+                    "default": "WSFCNode2"
                 }
             }
         }
@@ -186,7 +194,7 @@
         },
         "LatestAmiId": {
             "Type": "AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>",
-            "Default": "/aws/service/ami-windows-latest/Windows_Server-2012-R2_RTM-English-64Bit-Base"
+            "Default": "/aws/service/ami-windows-latest/Windows_Server-2016-English-Full-Base"
         },
         "PrivateSubnet1ID": {
             "Description": "ID of the private subnet in AZ1 (e.g., subnet-a0246dcd)",
@@ -236,6 +244,22 @@
             "AllowedPattern": "[a-zA-Z0-9]+\\..+",
             "Default": "10.0.0.0/16",
             "Description": "CIDR Block used by the VPC",
+            "Type": "String"
+        },
+        "WSFCNode1NetBIOSName": {
+            "AllowedPattern": "[a-zA-Z0-9\\-]+",
+            "Default": "DC2",
+            "Description": "NetBIOS name of the existing WSFC server in AZ1",
+            "MaxLength": "15",
+            "MinLength": "1",
+            "Type": "String"
+        },
+        "WSFCNode2NetBIOSName": {
+            "AllowedPattern": "[a-zA-Z0-9\\-]+",
+            "Default": "DC2",
+            "Description": "NetBIOS name of the existing WSFC server in AZ2",
+            "MaxLength": "15",
+            "MinLength": "1",
             "Type": "String"
         }
     },
@@ -431,6 +455,91 @@
                                 },
                                 "authentication": "S3AccessCreds"
                             },
+                            "C:\\cfn\\scripts\\AddNode2ToDFSNamespace.ps1": {
+                                "source": {
+                                    "Fn::Sub": [
+                                        "https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/AddNode2ToDFSNamespace.ps1",
+                                        {
+                                            "QSS3Region": {
+                                                "Fn::If": [
+                                                    "GovCloudCondition",
+                                                    "s3-us-gov-west-1",
+                                                    "s3"
+                                                ]
+                                            }
+                                        }
+                                    ]
+                                },
+                                "authentication": "S3AccessCreds"
+                            },
+                            "C:\\cfn\\scripts\\Create-DFSNamespaceNode1.ps1": {
+                                "source": {
+                                    "Fn::Sub": [
+                                        "https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/Create-DFSNamespaceNode1.ps1",
+                                        {
+                                            "QSS3Region": {
+                                                "Fn::If": [
+                                                    "GovCloudCondition",
+                                                    "s3-us-gov-west-1",
+                                                    "s3"
+                                                ]
+                                            }
+                                        }
+                                    ]
+                                },
+                                "authentication": "S3AccessCreds"
+                            },
+                            "C:\\cfn\\scripts\\Disable-RemoteFirewall.ps1": {
+                                "source": {
+                                    "Fn::Sub": [
+                                        "https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/Disable-RemoteFirewall.ps1",
+                                        {
+                                            "QSS3Region": {
+                                                "Fn::If": [
+                                                    "GovCloudCondition",
+                                                    "s3-us-gov-west-1",
+                                                    "s3"
+                                                ]
+                                            }
+                                        }
+                                    ]
+                                },
+                                "authentication": "S3AccessCreds"
+                            },
+                            "C:\\cfn\\scripts\\Install-DFS.ps1": {
+                                "source": {
+                                    "Fn::Sub": [
+                                        "https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/Install-DFS.ps1",
+                                        {
+                                            "QSS3Region": {
+                                                "Fn::If": [
+                                                    "GovCloudCondition",
+                                                    "s3-us-gov-west-1",
+                                                    "s3"
+                                                ]
+                                            }
+                                        }
+                                    ]
+                                },
+                                "authentication": "S3AccessCreds"
+                            },
+                            "C:\\cfn\\scripts\\Install-DFSRemote.ps1": {
+                                "source": {
+                                    "Fn::Sub": [
+                                        "https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/Install-DFSRemote.ps1",
+                                        {
+                                            "QSS3Region": {
+                                                "Fn::If": [
+                                                    "GovCloudCondition",
+                                                    "s3-us-gov-west-1",
+                                                    "s3"
+                                                ]
+                                            }
+                                        }
+                                    ]
+                                },
+                                "authentication": "S3AccessCreds"
+                            },
                             "C:\\cfn\\scripts\\set-path.ps1": {
                                 "source": {
                                     "Fn::Sub": [
@@ -578,12 +687,93 @@
                     },
                     "installWSUS": {
                         "commands": {
-                            "1-execute-powershell-script-install-wsus": {
+                            "1-disable-WSFC1-firewall": {
+                                "command": {
+                                    "Fn::Join": [
+                                        "",
+                                        [
+                                            "powershell.exe -Command \"C:\\cfn\\scripts\\Disable-RemoteFirewall.ps1 -RemoteHost'",
+                                            {
+                                                "Ref": "WSFCNode1NetBIOSName"
+                                            },
+                                            "' -UserName '",
+                                            {
+                                                "Ref": "DomainNetBIOSName"
+                                            },
+                                            "\\",
+                                            {
+                                                "Ref": "DomainAdminUser"
+                                            },
+                                            "' -Password '",
+                                            {
+                                                "Ref": "DomainAdminPassword"
+                                            },
+                                            "'\""
+                                        ]
+                                    ]
+                                },
+                                "waitAfterCompletion": "0"
+                            },
+                            "2-disable-WSFC2-firewall": {
+                                "command": {
+                                    "Fn::Join": [
+                                        "",
+                                        [
+                                            "powershell.exe -Command \"C:\\cfn\\scripts\\Disable-RemoteFirewall.ps1 -RemoteHost'",
+                                            {
+                                                "Ref": "WSFCNode2NetBIOSName"
+                                            },
+                                            "' -UserName '",
+                                            {
+                                                "Ref": "DomainNetBIOSName"
+                                            },
+                                            "\\",
+                                            {
+                                                "Ref": "DomainAdminUser"
+                                            },
+                                            "' -Password '",
+                                            {
+                                                "Ref": "DomainAdminPassword"
+                                            },
+                                            "'\""
+                                        ]
+                                    ]
+                                },
+                                "waitAfterCompletion": "0"
+                            },
+                            "3-execute-powershell-script-install-wsus": {
                                 "command": {
                                     "Fn::Join": [
                                         "",
                                         [
                                             "powershell.exe -Command \"C:\\cfn\\scripts\\Install-WSUS.ps1"
+                                        ]
+                                    ]
+                                },
+                                "waitAfterCompletion": "0"
+                            },
+                            "4-create-dfs-namespace": {
+                                "command": {
+                                    "Fn::Join": [
+                                        "",
+                                        [
+                                            "powershell.exe -Command \"C:\\cfn\\scripts\\Create-DFSNamespaceNode1.ps1 -DomainName'",
+                                            {
+                                                "Ref": "DomainDNSName"
+                                            },
+                                            "' -UserName '",
+                                            {
+                                                "Ref": "DomainNetBIOSName"
+                                            },
+                                            "\\",
+                                            {
+                                                "Ref": "DomainAdminUser"
+                                            },
+                                            "' -Password '",
+                                            {
+                                                "Ref": "DomainAdminPassword"
+                                            },
+                                            "'\""
                                         ]
                                     ]
                                 },
@@ -819,6 +1009,23 @@
                                 },
                                 "authentication": "S3AccessCreds"
                             },
+                            "C:\\cfn\\scripts\\AddNode2ToDFSNamespace.ps1": {
+                                "source": {
+                                    "Fn::Sub": [
+                                        "https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/AddNode2ToDFSNamespace.ps1",
+                                        {
+                                            "QSS3Region": {
+                                                "Fn::If": [
+                                                    "GovCloudCondition",
+                                                    "s3-us-gov-west-1",
+                                                    "s3"
+                                                ]
+                                            }
+                                        }
+                                    ]
+                                },
+                                "authentication": "S3AccessCreds"
+                            },
                             "C:\\cfn\\scripts\\set-path.ps1": {
                                 "source": {
                                     "Fn::Sub": [
@@ -976,6 +1183,33 @@
                                     ]
                                 },
                                 "waitAfterCompletion": "0"
+                            },
+                            "2-add-to-DFS-namespace": {
+                                "command": {
+                                    "Fn::Join": [
+                                        "",
+                                        [
+                                            "powershell.exe -Command \"C:\\cfn\\scripts\\AddNode2ToDFSNameSpace.ps1 -DomainName '",
+                                            {
+                                                "Ref": "DomainDNSName"
+                                            },
+                                            "' -UserName '",
+                                            {
+                                                "Ref": "DomainNetBIOSName"
+                                            },
+                                            "\\",
+                                            {
+                                                "Ref": "DomainAdminUser"
+                                            },
+                                            "' -Password '",
+                                            {
+                                                "Ref": "DomainAdminPassword"
+                                            },
+                                            "'\""
+                                        ]
+                                    ]
+                                },
+                                "waitAfterCompletion": "0"
                             }
                         }
                     },
@@ -1087,6 +1321,14 @@
                         "IpProtocol": "tcp",
                         "FromPort": "443",
                         "ToPort": "443",
+                        "CidrIp": {
+                            "Ref": "VPCCIDR"
+                        }
+                    },
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "1433",
+                        "ToPort": "1433",
                         "CidrIp": {
                             "Ref": "VPCCIDR"
                         }
