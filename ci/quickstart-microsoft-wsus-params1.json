@@ -120,7 +120,7 @@
     },
     {
         "ParameterKey": "WSFCNode1NetBIOSName",
-        "ParameterValue": "SPTWSFC1",
+        "ParameterValue": "WSFC1",
         "UsePreviousValue": false
     },
     {
@@ -145,7 +145,7 @@
     },
     {
         "ParameterKey": "WSFCNode2NetBIOSName",
-        "ParameterValue": "SPTWSFCN2",
+        "ParameterValue": "WSFCN2",
         "UsePreviousValue": false
     },
     {
