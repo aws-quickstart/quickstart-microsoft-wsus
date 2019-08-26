@@ -117,10 +117,10 @@
                     "default": "VPC CIDR"
                 },
                 "WSFCNode1NetBIOSName": {
-                    "default": "WSFCNode1"
+                    "default": "WSFC1"
                 },
                 "WSFCNode2NetBIOSName": {
-                    "default": "WSFCNode2"
+                    "default": "WSFC2"
                 }
             }
         }

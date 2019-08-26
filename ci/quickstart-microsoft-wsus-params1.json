@@ -145,7 +145,7 @@
     },
     {
         "ParameterKey": "WSFCNode2NetBIOSName",
-        "ParameterValue": "WSFCN2",
+        "ParameterValue": "WSFC2",
         "UsePreviousValue": false
     },
     {
