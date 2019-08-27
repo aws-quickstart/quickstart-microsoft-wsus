@@ -739,7 +739,7 @@
                                     "Fn::Join": [
                                         "",
                                         [
-                                            "powershell.exe -Command \"C:\\cfn\\scripts\\Disable-RemoteFirewall.ps1 -RemoteHost'",
+                                            "powershell.exe -Command \"C:\\cfn\\scripts\\Disable-RemoteFirewall.ps1 -RemoteHost '",
                                             {
                                                 "Ref": "WSFCNode2NetBIOSName"
                                             },
