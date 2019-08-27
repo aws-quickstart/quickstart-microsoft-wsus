@@ -777,7 +777,7 @@
                                     "Fn::Join": [
                                         "",
                                         [
-                                            "powershell.exe -Command \"C:\\cfn\\scripts\\Create-DFSNamespaceNode1.ps1 -DomainName'",
+                                            "powershell.exe -Command \"C:\\cfn\\scripts\\Create-DFSNamespaceNode1.ps1 -DomainName '",
                                             {
                                                 "Ref": "DomainDNSName"
                                             },
