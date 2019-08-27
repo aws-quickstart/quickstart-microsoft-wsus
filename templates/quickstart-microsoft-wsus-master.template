@@ -26,7 +26,9 @@
                         "WSUSInstanceType",
                         "LatestAmiId",
                         "WSFCNode1NetBIOSName",
-                        "WSFCNode2NetBIOSName"
+                        "WSFCNode2NetBIOSName",
+                        "WSUSNode1IP",
+                        "WSUSNode2IP"
                     ]
                 },
                 {
@@ -275,6 +277,12 @@
                 },
                 "WSFCNode3PrivateIP3": {
                     "default": "Cluster Node 3 Private IP Address 3"
+                },
+                "WSUSNode1IP": {
+                    "default": "10.0.0.201"
+                },
+                "WSUSNode2IP": {
+                    "default": "10.0.64.201"
                 }
             }
         }
@@ -570,7 +578,7 @@
         },
         "WSFCNode1NetBIOSName": {
             "AllowedPattern": "[a-zA-Z0-9]+",
-            "Default": "WSFCNode1",
+            "Default": "WSFC1",
             "Description": "NetBIOS name of the first WSFC Node (up to 15 characters)",
             "MaxLength": "15",
             "MinLength": "1",
@@ -610,7 +618,7 @@
         },
         "WSFCNode2NetBIOSName": {
             "AllowedPattern": "[a-zA-Z0-9]+",
-            "Default": "WSFCNode2",
+            "Default": "WSFC2",
             "Description": "NetBIOS name of the second WSFC Node (up to 15 characters)",
             "MaxLength": "15",
             "MinLength": "1",
@@ -667,6 +675,18 @@
             "AllowedPattern": "^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$",
             "Default": "10.0.64.102",
             "Description": "Third private IP for Availability Group Listener on optional third WSFC Node",
+            "Type": "String"
+        },
+        "WSUSNode1IP": {
+            "AllowedPattern": "^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$",
+            "Default": "10.0.0.201",
+            "Description": "Private IP address for WSUS Node 1",
+            "Type": "String"
+        },
+        "WSUSNode2IP": {
+            "AllowedPattern": "^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$",
+            "Default": "10.0.0.201",
+            "Description": "Private IP address for WSUS Node 1",
             "Type": "String"
         }
     },
@@ -1099,6 +1119,12 @@
                             "VPCStack",
                             "Outputs.PublicSubnet2ID"
                         ]
+                    },
+                    "WSFCNode1NetBIOSName": {
+                        "Ref": "WSFCNode1NetBIOSName"
+                    },
+                    "WSFCNode2NetBIOSName": {
+                        "Ref": "WSFCNode2NetBIOSName"
                     },
                     "QSS3BucketName": {
                         "Ref": "QSS3BucketName"

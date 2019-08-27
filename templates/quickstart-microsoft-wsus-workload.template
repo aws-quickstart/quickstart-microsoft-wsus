@@ -42,7 +42,9 @@
                         "WSUSInstanceType",
                         "LatestAmiId",
                         "WSFCNode1NetBIOSName",
-                        "WSFCNode2NetBIOSName"
+                        "WSFCNode2NetBIOSName",
+                        "WSUSNode1IP",
+                        "WSUSNode2IP"
                     ]
                 },
                 {
@@ -121,6 +123,12 @@
                 },
                 "WSFCNode2NetBIOSName": {
                     "default": "WSFC2"
+                },
+                "WSUSNode1IP": {
+                    "default": "10.0.0.201"
+                },
+                "WSUSNode2IP": {
+                    "default": "10.0.64.201"
                 }
             }
         }
@@ -248,18 +256,30 @@
         },
         "WSFCNode1NetBIOSName": {
             "AllowedPattern": "[a-zA-Z0-9\\-]+",
-            "Default": "DC2",
-            "Description": "NetBIOS name of the existing WSFC server in AZ1",
+            "Default": "WSFC1",
+            "Description": "NetBIOS name of the existing SQL WSFC server in AZ1",
             "MaxLength": "15",
             "MinLength": "1",
             "Type": "String"
         },
         "WSFCNode2NetBIOSName": {
             "AllowedPattern": "[a-zA-Z0-9\\-]+",
-            "Default": "DC2",
-            "Description": "NetBIOS name of the existing WSFC server in AZ2",
+            "Default": "WSFC2",
+            "Description": "NetBIOS name of the existing SQL WSFC server in AZ2",
             "MaxLength": "15",
             "MinLength": "1",
+            "Type": "String"
+        },
+        "WSUSNode1IP": {
+            "AllowedPattern": "^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$",
+            "Default": "10.0.0.201",
+            "Description": "Private IP address for WSUS Node 1",
+            "Type": "String"
+        },
+        "WSUSNode2IP": {
+            "AllowedPattern": "^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$",
+            "Default": "10.0.64.201",
+            "Description": "Private IP address for WSUS Node 2",
             "Type": "String"
         }
     },
