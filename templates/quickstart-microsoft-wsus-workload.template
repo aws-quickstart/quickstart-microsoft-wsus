@@ -42,7 +42,8 @@
                         "WSUSInstanceType",
                         "LatestAmiId",
                         "WSFCNode1NetBIOSName",
-                        "WSFCNode2NetBIOSName"
+                        "WSFCNode2NetBIOSName",
+                        "ELBConfiguration"
                     ]
                 },
                 {
@@ -121,6 +122,9 @@
                 },
                 "WSFCNode2NetBIOSName": {
                     "default": "WSFC2"
+                },
+                "ELBConfiguration": {
+                    "default": "ELB Configuration"
                 }
             }
         }
@@ -261,6 +265,15 @@
             "MaxLength": "15",
             "MinLength": "1",
             "Type": "String"
+        },
+        "ELBConfiguration": {
+            "AllowedValues": [
+                "internal",
+                "external"
+            ],
+            "Default": "internal",
+            "Description": "Specify how to configure the Elastic Load Balancer. Allowed values are internal or external",
+            "Type": "String"
         }
     },
     "Conditions": {
@@ -270,6 +283,14 @@
                     "Ref": "AWS::Region"
                 },
                 "us-gov-west-1"
+            ]
+        },
+        "ELBConfigCondition": {
+            "Fn::Equals": [
+                {
+                    "Ref": "ELBConfiguration"
+                },
+                "internal"
             ]
         }
     },
