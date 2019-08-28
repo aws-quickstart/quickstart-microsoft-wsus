@@ -3,10 +3,10 @@ try {
 
     Start-Transcript -Path c:\cfn\log\Install-WSUS.ps1.txt -Append
     
-    Install-WindowsFeature -Name UpdateServices -IncludeManagementTools
+    Install-WindowsFeature -Name UpdateServices-Services,UpdateServices-DB -IncludeManagementTools
 
-    New-Item -Path C: -Name WSUS -ItemType Directory
-    & 'C:\Program Files\Update Services\Tools\wsusutil.exe' postinstall CONTENT_DIR=C:\WSUS
+    & 'C:\Program Files\Update Services\Tools\wsusutil.exe' postinstall SQL_INSTANCE_NAME="WSFCCluster1"
+
 }
 catch {
     Write-Verbose "$($_.exception.message)@ $(Get-Date)"

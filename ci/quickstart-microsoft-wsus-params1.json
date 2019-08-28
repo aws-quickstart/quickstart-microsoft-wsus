@@ -6,7 +6,7 @@
     },
     {
         "ParameterKey": "ADServer1NetBIOSName",
-        "ParameterValue": "DCSPST1",
+        "ParameterValue": "DC1",
         "UsePreviousValue": false
     },
     {
@@ -21,7 +21,7 @@
     },
     {
         "ParameterKey": "ADServer2NetBIOSName",
-        "ParameterValue": "DCSPST2",
+        "ParameterValue": "DC2",
         "UsePreviousValue": false
     },
     {
@@ -36,7 +36,7 @@
     },
     {
         "ParameterKey": "DomainAdminPassword",
-        "ParameterValue": "$[taskcat_genpass_16]",
+        "ParameterValue": "Password1",
         "UsePreviousValue": false
     },
     {
@@ -97,5 +97,70 @@
     {
         "ParameterKey": "QSS3BucketName",
         "ParameterValue": "$[taskcat_autobucket]"
+    },
+    {
+        "ParameterKey": "SQLServerVersion",
+        "ParameterValue": "2016",
+        "UsePreviousValue": false
+    },
+    {
+        "ParameterKey": "SQLServiceAccount",
+        "ParameterValue": "sqlsa",
+        "UsePreviousValue": false
+    },
+    {
+        "ParameterKey": "SQLServiceAccountPassword",
+        "ParameterValue": "$[taskcat_genpass_16]",
+        "UsePreviousValue": false
+    },
+    {
+        "ParameterKey": "WSFCNode1InstanceType",
+        "ParameterValue": "r5.2xlarge",
+        "UsePreviousValue": false
+    },
+    {
+        "ParameterKey": "WSFCNode1NetBIOSName",
+        "ParameterValue": "WSFC1",
+        "UsePreviousValue": false
+    },
+    {
+        "ParameterKey": "WSFCNode1PrivateIP1",
+        "ParameterValue": "10.0.0.100",
+        "UsePreviousValue": false
+    },
+    {
+        "ParameterKey": "WSFCNode1PrivateIP2",
+        "ParameterValue": "10.0.0.101",
+        "UsePreviousValue": false
+    },
+    {
+        "ParameterKey": "WSFCNode1PrivateIP3",
+        "ParameterValue": "10.0.0.102",
+        "UsePreviousValue": false
+    },
+    {
+        "ParameterKey": "WSFCNode2InstanceType",
+        "ParameterValue": "r5.2xlarge",
+        "UsePreviousValue": false
+    },
+    {
+        "ParameterKey": "WSFCNode2NetBIOSName",
+        "ParameterValue": "WSFC2",
+        "UsePreviousValue": false
+    },
+    {
+        "ParameterKey": "WSFCNode2PrivateIP1",
+        "ParameterValue": "10.0.64.100",
+        "UsePreviousValue": false
+    },
+    {
+        "ParameterKey": "WSFCNode2PrivateIP2",
+        "ParameterValue": "10.0.64.101",
+        "UsePreviousValue": false
+    },
+    {
+        "ParameterKey": "WSFCNode2PrivateIP3",
+        "ParameterValue": "10.0.64.102",
+        "UsePreviousValue": false
     }
 ]
