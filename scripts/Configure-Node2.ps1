@@ -31,7 +31,7 @@ try {
 
     & 'C:\Program Files\Update Services\Tools\wsusutil.exe' postinstall CONTENT_DIR=$DFSPath
 
-    Add-DfsrMember -GroupName "WSUS" -ComputerName $Node1
+    Add-DfsrMember -GroupName "WSUS" -ComputerName $HostName
     Add-DfsrConnection -GroupName "WSUS" -SourceComputerName $Node1 -DestinationComputerName $HostName
     Set-DfsrMembership -GroupName "WSUS" -FolderName "WSUS" -ContentPath "C:\WSUS" -ComputerName $Node1 -PrimaryMember $True -StagingPathQuotaInMB 16384 -Force
     Set-DfsrMembership -GroupName "WSUS" -FolderName "WSUS" -ContentPath "C:\WSUS" -ComputerName $HostName -StagingPathQuotaInMB 16384 -Force
