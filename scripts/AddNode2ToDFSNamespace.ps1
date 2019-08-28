@@ -23,6 +23,7 @@ try {
 
     New-DfsnRootTarget -Path $dfspath -TargetPath $dfstarget -Credential $cred
 
+    & 'C:\Program Files\Update Services\Tools\wsusutil.exe' postinstall CONTENT_DIR=$dfspath
 }
 catch {
     Write-Verbose "$($_.exception.message)@ $(Get-Date)"
