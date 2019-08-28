@@ -913,7 +913,7 @@
                                             {
                                                 "Ref": "WSFCNode1NetBIOSName"
                                             },
-                                            "'",
+                                            "' -Node1 'WSUS1'",
                                             "\"\n"
                                         ]
                                     ]
