@@ -342,7 +342,7 @@
                             "setup",
                             "rename",
                             "join",
-                            "installWSUS",
+                            "installWSUS1",
                             "finalize"
                         ]
                     },
@@ -593,6 +593,38 @@
                                     ]
                                 },
                                 "authentication": "S3AccessCreds"
+                            },
+                            "C:\\cfn\\scripts\\Configure-Node1.ps1": {
+                                "source": {
+                                    "Fn::Sub": [
+                                        "https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/Configure-Node1.ps1",
+                                        {
+                                            "QSS3Region": {
+                                                "Fn::If": [
+                                                    "GovCloudCondition",
+                                                    "s3-us-gov-west-1",
+                                                    "s3"
+                                                ]
+                                            }
+                                        }
+                                    ]
+                                },
+                                "authentication": "S3AccessCreds"
+                            },
+                            "C:\\cfn\\scripts\\InstallWSUS1.bat": {
+                                "content": {
+                                    "Fn::Join": [
+                                        "",
+                                        [
+                                            "powershell.exe -Command \"C:\\cfn\\scripts\\Configure-Node1.ps1 -SQLServer '",
+                                            {
+                                                "Ref": "WSFCNode1NetBIOSName"
+                                            },
+                                            "'",
+                                            "\"\n"
+                                        ]
+                                    ]
+                                }
                             }
                         },
                         "commands": {
@@ -688,173 +720,52 @@
                             }
                         }
                     },
-                    "installWSUS": {
+                    "installWSUS1": {
                         "commands": {
-                            "1-disable-WSFC1-firewall": {
+                            "a-enable-autologon-and-set-startup-script": {
                                 "command": {
                                     "Fn::Join": [
                                         "",
                                         [
-                                            "powershell.exe -Command \"C:\\cfn\\scripts\\Disable-RemoteFirewall.ps1 -RemoteHost '",
-                                            {
-                                                "Ref": "WSFCNode1NetBIOSName"
-                                            },
-                                            "' -UserName '",
-                                            {
-                                                "Ref": "DomainNetBIOSName"
-                                            },
-                                            "\\",
+                                            "powershell.exe -Command \"C:\\cfn\\scripts\\Enable-AutoLogon.ps1",
+                                            " -UserName '",
                                             {
                                                 "Ref": "DomainAdminUser"
                                             },
-                                            "' -Password '",
-                                            {
-                                                "Ref": "DomainAdminPassword"
-                                            },
-                                            "'\""
-                                        ]
-                                    ]
-                                },
-                                "waitAfterCompletion": "0"
-                            },
-                            "2-disable-WSFC2-firewall": {
-                                "command": {
-                                    "Fn::Join": [
-                                        "",
-                                        [
-                                            "powershell.exe -Command \"C:\\cfn\\scripts\\Disable-RemoteFirewall.ps1 -RemoteHost '",
-                                            {
-                                                "Ref": "WSFCNode2NetBIOSName"
-                                            },
-                                            "' -UserName '",
-                                            {
-                                                "Ref": "DomainNetBIOSName"
-                                            },
-                                            "\\",
-                                            {
-                                                "Ref": "DomainAdminUser"
-                                            },
-                                            "' -Password '",
-                                            {
-                                                "Ref": "DomainAdminPassword"
-                                            },
-                                            "'\""
-                                        ]
-                                    ]
-                                },
-                                "waitAfterCompletion": "0"
-                            },
-                            "3-execute-powershell-script-install-wsus": {
-                                "command": {
-                                    "Fn::Join": [
-                                        "",
-                                        [
-                                            "powershell.exe -Command \"C:\\cfn\\scripts\\Install-WSUS.ps1"
-                                        ]
-                                    ]
-                                },
-                                "waitAfterCompletion": "0"
-                            },
-                            "4-execute-powershell-script-install-dfs": {
-                                "command": {
-                                    "Fn::Join": [
-                                        "",
-                                        [
-                                            "powershell.exe -Command \"C:\\cfn\\scripts\\Install-DFS.ps1"
-                                        ]
-                                    ]
-                                },
-                                "waitAfterCompletion": "0"
-                            },
-                            "5-execute-powershell-script-install-dfs-on-dc1": {
-                                "command": {
-                                    "Fn::Join": [
-                                        "",
-                                        [
-                                            "powershell.exe -Command \"C:\\cfn\\scripts\\Install-DFSRemote.ps1 -RemoteHost '",
-                                            {
-                                                "Ref": "ADServer1NetBIOSName"
-                                            },
-                                            "' -UserName '",
-                                            {
-                                                "Ref": "DomainNetBIOSName"
-                                            },
-                                            "\\",
-                                            {
-                                                "Ref": "DomainAdminUser"
-                                            },
-                                            "' -Password '",
-                                            {
-                                                "Ref": "DomainAdminPassword"
-                                            },
-                                            "'\""
-                                        ]
-                                    ]
-                                },
-                                "waitAfterCompletion": "0"
-                            },
-                            "6-execute-powershell-script-install-dfs-on-dc2": {
-                                "command": {
-                                    "Fn::Join": [
-                                        "",
-                                        [
-                                            "powershell.exe -Command \"C:\\cfn\\scripts\\Install-DFSRemote.ps1 -RemoteHost '",
-                                            {
-                                                "Ref": "ADServer2NetBIOSName"
-                                            },
-                                            "' -UserName '",
-                                            {
-                                                "Ref": "DomainNetBIOSName"
-                                            },
-                                            "\\",
-                                            {
-                                                "Ref": "DomainAdminUser"
-                                            },
-                                            "' -Password '",
-                                            {
-                                                "Ref": "DomainAdminPassword"
-                                            },
-                                            "'\""
-                                        ]
-                                    ]
-                                },
-                                "waitAfterCompletion": "0"
-                            },
-                            "7-create-dfs-namespace": {
-                                "command": {
-                                    "Fn::Join": [
-                                        "",
-                                        [
-                                            "powershell.exe -Command \"C:\\cfn\\scripts\\Create-DFSNamespaceNode1.ps1 -RemoteHost '",
-                                            {
-                                                "Ref": "ADServer1NetBIOSName"
-                                            },
-                                            "' -DomainName '",
+                                            "@",
                                             {
                                                 "Ref": "DomainDNSName"
                                             },
-                                            "' -UserName '",
-                                            {
-                                                "Ref": "DomainNetBIOSName"
-                                            },
-                                            "\\",
-                                            {
-                                                "Ref": "DomainAdminUser"
-                                            },
                                             "' -Password '",
                                             {
                                                 "Ref": "DomainAdminPassword"
                                             },
-                                            "'\""
+                                            "' -StartupScript 'C:\\cfn\\scripts\\InstallWSUS1.bat'",
+                                            "\""
                                         ]
                                     ]
                                 },
                                 "waitAfterCompletion": "0"
+                            },
+                            "b-reboot": {
+                                "command": {
+                                    "Fn::Join": [
+                                        "",
+                                        [
+                                            "powershell.exe -Command Restart-Computer -Force"
+                                        ]
+                                    ]
+                                },
+                                "waitAfterCompletion": "forever"
                             }
                         }
                     },
                     "finalize": {
                         "commands": {
+                            "a-disable-autologon": {
+                                "command": "powershell.exe -Command \"C:\\cfn\\scripts\\Disable-AutoLogon.ps1\"",
+                                "waitAfterCompletion": "0"
+                            },
                             "c-signal-success": {
                                 "command": "powershell.exe -Command \"Write-AWSQuickStartStatus\"",
                                 "waitAfterCompletion": "0"
@@ -948,7 +859,7 @@
                             "setup",
                             "rename",
                             "join",
-                            "installWSUS",
+                            "installWSUS2",
                             "finalize"
                         ]
                     },
@@ -1165,6 +1076,38 @@
                                     ]
                                 },
                                 "authentication": "S3AccessCreds"
+                            },
+                            "C:\\cfn\\scripts\\Configure-Node2.ps1": {
+                                "source": {
+                                    "Fn::Sub": [
+                                        "https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/Configure-Node2.ps1",
+                                        {
+                                            "QSS3Region": {
+                                                "Fn::If": [
+                                                    "GovCloudCondition",
+                                                    "s3-us-gov-west-1",
+                                                    "s3"
+                                                ]
+                                            }
+                                        }
+                                    ]
+                                },
+                                "authentication": "S3AccessCreds"
+                            },
+                            "C:\\cfn\\scripts\\InstallWSUS2.bat": {
+                                "content": {
+                                    "Fn::Join": [
+                                        "",
+                                        [
+                                            "powershell.exe -Command \"C:\\cfn\\scripts\\Configure-Node2.ps1 -SQLServer '",
+                                            {
+                                                "Ref": "WSFCNode1NetBIOSName"
+                                            },
+                                            "'",
+                                            "\"\n"
+                                        ]
+                                    ]
+                                }
                             }
                         },
                         "commands": {
@@ -1260,72 +1203,52 @@
                             }
                         }
                     },
-                    "installWSUS": {
+                    "installWSUS2": {
                         "commands": {
-                            "1-execute-powershell-script-install-wsus": {
+                            "a-enable-autologon-and-set-startup-script": {
                                 "command": {
                                     "Fn::Join": [
                                         "",
                                         [
-                                            "powershell.exe -Command \"C:\\cfn\\scripts\\Install-WSUS.ps1"
-                                        ]
-                                    ]
-                                },
-                                "waitAfterCompletion": "0"
-                            },
-                            "1-execute-powershell-script-install-dfs": {
-                                "command": {
-                                    "Fn::Join": [
-                                        "",
-                                        [
-                                            "powershell.exe -Command \"C:\\cfn\\scripts\\Install-DFS.ps1"
-                                        ]
-                                    ]
-                                },
-                                "waitAfterCompletion": "0"
-                            },
-                            "3-add-to-DFS-namespace": {
-                                "command": {
-                                    "Fn::Join": [
-                                        "",
-                                        [
-                                            "powershell.exe -Command \"C:\\cfn\\scripts\\AddNode2ToDFSNameSpace.ps1 -DomainName '",
-                                            {
-                                                "Ref": "DomainDNSName"
-                                            },
-                                            "' -UserName '",
-                                            {
-                                                "Ref": "DomainNetBIOSName"
-                                            },
-                                            "\\",
+                                            "powershell.exe -Command \"C:\\cfn\\scripts\\Enable-AutoLogon.ps1",
+                                            " -UserName '",
                                             {
                                                 "Ref": "DomainAdminUser"
+                                            },
+                                            "@",
+                                            {
+                                                "Ref": "DomainDNSName"
                                             },
                                             "' -Password '",
                                             {
                                                 "Ref": "DomainAdminPassword"
                                             },
-                                            "'\""
+                                            "' -StartupScript 'C:\\cfn\\scripts\\InstallWSUS2.bat'",
+                                            "\""
                                         ]
                                     ]
                                 },
                                 "waitAfterCompletion": "0"
                             },
-                            "4-configure-dfs-replication": {
+                            "b-reboot": {
                                 "command": {
                                     "Fn::Join": [
                                         "",
                                         [
-                                            "powershell.exe -Command \"C:\\cfn\\scripts\\Create-DFSReplicationGroup.ps1"
+                                            "powershell.exe -Command Restart-Computer -Force"
                                         ]
                                     ]
                                 },
-                                "waitAfterCompletion": "0"
+                                "waitAfterCompletion": "forever"
                             }
                         }
                     },
                     "finalize": {
                         "commands": {
+                            "a-disable-autologon": {
+                                "command": "powershell.exe -Command \"C:\\cfn\\scripts\\Disable-AutoLogon.ps1\"",
+                                "waitAfterCompletion": "0"
+                            },
                             "c-signal-success": {
                                 "command": "powershell.exe -Command \"Write-AWSQuickStartStatus\"",
                                 "waitAfterCompletion": "0"

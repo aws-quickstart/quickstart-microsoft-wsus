@@ -19,12 +19,15 @@ try {
 
     Start-Transcript -Path c:\cfn\log\Create-DFSNamespace.ps1.txt -Append
 
+    Enable-PSRemoting -Force
+
+    $pass = ConvertTo-SecureString $Password -AsPlainText -Force
+    $cred = New-Object System.Management.Automation.PSCredential -ArgumentList $UserName,$pass
+
     $scriptBlock = {
         $hostname = $env:COMPUTERNAME
         $dfspath = ("\\" + $DomainName + "\WSUS")
         $localpath = ("\\" + $hostname + "\WSUS")
-        $pass = ConvertTo-SecureString $Password -AsPlainText -Force
-        $cred = New-Object System.Management.Automation.PSCredential -ArgumentList $UserName,$pass
         New-DfsnRoot -Path $dfspath -TargetPath $localpath -Type DomainV2 -Credential $cred
     }
 
