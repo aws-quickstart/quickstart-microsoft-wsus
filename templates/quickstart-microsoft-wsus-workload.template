@@ -1152,10 +1152,7 @@
         },
         "WSUSELB": {
             "Type": "AWS::ElasticLoadBalancing::LoadBalancer",
-            "DependsOn": [
-                "WSUS1",
-                "WSUS2"
-            ],
+            "DependsOn": "WSUS2WaitCondition",
             "Properties": {
                 "Subnets": {
                     "Fn::If": [
@@ -1316,7 +1313,7 @@
                         "FromPort": "1",
                         "ToPort": "65535",
                         "CidrIp": {
-                            "Ref": "WSUSSG"
+                            "Ref": "VPCCIDR"
                         }
                     }
                 ]
