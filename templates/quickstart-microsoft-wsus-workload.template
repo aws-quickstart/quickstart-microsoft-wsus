@@ -1310,6 +1310,14 @@
                         "CidrIp": {
                             "Ref": "VPCCIDR"
                         }
+                    },
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "1",
+                        "ToPort": "65535",
+                        "CidrIp": {
+                            "Ref": "WSUSSG"
+                        }
                     }
                 ]
             }

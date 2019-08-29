@@ -10,7 +10,7 @@ param(
 try {
     $ErrorActionPreference = "Stop"
 
-    Start-Transcript -Path c:\cfn\log\Install-WSUS.ps1.txt -Append
+    Start-Transcript -Path c:\cfn\log\Configure-Node2.ps1.txt -Append
 
 # Enable remote PowerShell and disable local firewall
     enable-psremoting
