@@ -14,3 +14,7 @@
 	path = submodules/quickstart-microsoft-utilities
 	url = git@github.com:aws-quickstart/quickstart-microsoft-utilities.git
 	branch = master
+[submodule "submodules/quickstart-microsoft-sql"]
+	path = submodules/quickstart-microsoft-sql
+	url = git@github.com:aws-quickstart/quickstart-microsoft-sql.git
+	branch = master
