@@ -17,6 +17,7 @@ Metadata:
     - Label:
         default: Microsoft Active Directory Configuration
       Parameters:
+      - DomainJoin
       - DomainDNSName
       - DomainNetBIOSName
       - DomainAdminUser
@@ -27,7 +28,6 @@ Metadata:
       Parameters:
       - WSUSServerNetBIOSName
       - KeyPairName
-      - BastionSecurityGroupID
       - WindowsVersion
       - WorkloadInstanceType
     - Label:
@@ -43,8 +43,6 @@ Metadata:
       - QSS3BucketName
       - QSS3KeyPrefix
     ParameterLabels:
-      BastionSecurityGroupID:
-        default: Bastion Security Group ID
       KeyPairName:
         default: SSH Key Name
       PrivateSubnet1ID:
@@ -57,6 +55,8 @@ Metadata:
         default: VPC ID
       WorkloadInstanceType:
         default: Workload Servers Instance Type
+      DomainJoin:
+        default: Join Active Directory domain?
       DomainAdminPassword:
         default: Domain Admin Password
       DomainAdminUser:
@@ -80,10 +80,6 @@ Metadata:
       WindowsVersion:
         default: Windows version
 Parameters:
-  BastionSecurityGroupID:
-    Description: ID of the bastion host security group to enable SSH connections (e.g.,
-      sg-7f16e910)
-    Type: AWS::EC2::SecurityGroup::Id
   KeyPairName:
     Description: Name of an existing EC2 key pair. All instances will launch with
       this key pair.
@@ -121,12 +117,18 @@ Parameters:
     MaxLength: '15'
     MinLength: '1'
     Type: String
+  DomainJoin:
+    AllowedValues:
+    - "Yes. Please join WSUS instance to my Active Directory domain."
+    - "No. Please keep WSUS as a standalone Windows instance."
+    ConstraintDescription: If no is selected, other AD related parameters will be ignored.
+    Default: "No. Please keep WSUS as a standalone Windows instance."
+    Description: Choose whether you want WSUS instance to be joined to an AD domain.
+    Type: String
   DomainAdminPassword:
-    AllowedPattern: "(?=^.{6,255}$)((?=.*\\d)(?=.*[A-Z])(?=.*[a-z])|(?=.*\\d)(?=.*[^A-Za-z0-9])(?=.*[a-z])|(?=.*[^A-Za-z0-9])(?=.*[A-Z])(?=.*[a-z])|(?=.*\\d)(?=.*[A-Z])(?=.*[^A-Za-z0-9]))^.*"
-    Description: Password for the domain admin user. Must be at least 8 characters
-      containing letters, numbers and symbols
+    Description: Password for the domain admin user.
     MaxLength: '32'
-    MinLength: '8'
+    MinLength: '0'
     NoEcho: 'true'
     Type: String
   DomainAdminUser:
@@ -146,7 +148,8 @@ Parameters:
     Type: String
   DomainMemberSGID:
     Description: ID of the Domain Member Security Group (e.g., sg-7f16e910)
-    Type: AWS::EC2::SecurityGroup::Id
+    Type: String
+    #AWS::EC2::SecurityGroup::Id
   DomainNetBIOSName:
     AllowedPattern: "[a-zA-Z0-9\\-]+"
     Default: EXAMPLE
@@ -228,6 +231,10 @@ Conditions:
     Fn::Equals:
     - Ref: WindowsVersion
     - Windows2019Full_MSSQL2017Standard
+  ADJoinSelected:
+    Fn::Equals:
+    - Ref: DomainJoin
+    - "Yes. Please join WSUS instance to my Active Directory domain."
 Rules:
   KeyPairsNotEmpty:
     Assertions:
@@ -543,6 +550,14 @@ Resources:
               CloudWatchLogGroupName: !Ref 'QuickStartLogs'
             Parameters:
               commands: !Sub "Rename-Computer -Restart -NewName '${WSUSServerNetBIOSName}'"
+        - name: "BranchDomainJoin"
+          action: aws:branch
+          inputs:
+            Choices:
+            - NextStep: DomainJoin
+              Variable: !Ref 'QuickStartLogs'
+              StartsWith: "Yes"
+            Default: "InstallWSUS"
         - name: "DomainJoin"
           action: "aws:runCommand"
           onFailure: "step:signalfailure"
@@ -596,9 +611,24 @@ Resources:
               CloudWatchLogGroupName: !Ref 'QuickStartLogs'
             Parameters:
               sourceType: "S3"
-              sourceInfo: !Sub ['{"path": "https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/install-wsus.ps1"}',
+              sourceInfo: !Sub ['{"path": "https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/configure-wsus.ps1"}',
                   {QSS3Region: !If [GovCloudCondition, s3-us-gov-west-1, s3]}]
-              commandLine: "./install-wsus.ps1 -langs '{{WSUSLanguagesList}}' -products '{{WSUSProductList}}' -classifications '{{WSUSClassification}}' -numOfSyncsPerDay {{WSUSNumOfSyncsPerDay}}"
+              commandLine: "./configure-wsus.ps1 -langs '{{WSUSLanguagesList}}' -products '{{WSUSProductList}}' -classifications '{{WSUSClassification}}' -numOfSyncsPerDay {{WSUSNumOfSyncsPerDay}}"
+        - name: "InstallSqlCmd"
+          action: "aws:runCommand"
+          onFailure: "step:signalfailure"
+          inputs:
+            DocumentName: "AWS-RunRemoteScript"
+            InstanceIds:
+              - "{{WSUSInstanceId}}"
+            CloudWatchOutputConfig:
+              CloudWatchOutputEnabled: "true"
+              CloudWatchLogGroupName: !Ref 'QuickStartLogs'
+            Parameters:
+              sourceType: "S3"
+              sourceInfo: !Sub ['{"path": "https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/install-sqlcmd.ps1"}',
+                  {QSS3Region: !If [GovCloudCondition, s3-us-gov-west-1, s3]}]
+              commandLine: "./install-sqlcmd.ps1"
         - name: "BranchMSSQL"
           action: aws:branch
           inputs:
@@ -702,8 +732,11 @@ Resources:
         SubnetId:
           Ref: PrivateSubnet1ID
         GroupSet:
-        - Ref: DomainMemberSGID
-        - Ref: WorkloadSecurityGroup
+          Fn::If:
+          - ADJoinSelected
+          - - Ref: DomainMemberSGID
+            - Ref: WorkloadSecurityGroup
+          - - Ref: WorkloadSecurityGroup
       Tags:
       - Key: Name
         Value:

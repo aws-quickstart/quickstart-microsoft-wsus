@@ -1,14 +1,5 @@
-#Downloading SSMS and SQLCMD
-#$ssms_url = "https://go.microsoft.com/fwlink/?linkid=2099720"
-$sqlcmd_url = "https://go.microsoft.com/fwlink/?linkid=2082790"
 $output = "d:\install\"
 New-Item -ItemType Directory -Force -Path $output
-
-#Invoke-WebRequest -Uri $ssms_url -OutFile "${output}ssms.exe"
-Invoke-WebRequest -Uri $sqlcmd_url -OutFile "${output}sqlcmd.msi"
-
-#Installing SQLCMD
-Start-Process msiexec.exe -Wait -ArgumentList "/I ${output}sqlcmd.msi /quiet"
 
 #Stopping WSUS
 Stop-Service IISADMIN
@@ -38,7 +29,8 @@ Move-Item -Path "${WIDdir}SUSDB_log.ldf" -Destination "${MSSQLdir}SUSDB_log.ldf"
        (FILENAME = '${MSSQLdir}SUSDB_Log.ldf')
        FOR ATTACH;
    GO" > "${output}2-attachSUSDB.sql"
-Start-Process sqlcmd.exe -Wait -ArgumentList "-S WSUSSQL -i ${output}2-attachSUSDB.sql"
+$serverName = hostname
+Start-Process sqlcmd.exe -Wait -ArgumentList "-S ${serverName} -i ${output}2-attachSUSDB.sql"
 
 #Check DB logins
 "USE [master]
@@ -47,7 +39,7 @@ CREATE LOGIN [NT AUTHORITY\NETWORK SERVICE] FROM WINDOWS WITH DEFAULT_DATABASE=[
 GO
 ALTER SERVER ROLE [sysadmin] ADD MEMBER [NT AUTHORITY\NETWORK SERVICE]
 GO" > "${output}3-ServerLoginSUSDB.sql"
-Start-Process sqlcmd.exe -Wait -ArgumentList "-S WSUSSQL -i ${output}3-ServerLoginSUSDB.sql"
+Start-Process sqlcmd.exe -Wait -ArgumentList "-S ${serverName} -i ${output}3-ServerLoginSUSDB.sql"
 
 #Edit the registry to point WSUS to the SQL Server Instance
 $registryPath = "HKLM:\SOFTWARE\Microsoft\Update Services\Server\Setup"
