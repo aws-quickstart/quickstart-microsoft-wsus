@@ -18,11 +18,6 @@ param (
 $transcriptPath = "C:\cfn\log\install-wsus-transcript.txt" -f $dirChar, $PSScriptRoot
 Start-Transcript $transcriptPath
 
-#Optimizing IIS configurations for WSUS
-Set-WebConfiguration "/system.applicationHost/applicationPools/add[@name='WsusPool']/recycling/periodicRestart/@privateMemory" -PSPath IIS:\ -Value 0
-Set-WebConfiguration "/system.applicationHost/applicationPools/add[@name='WsusPool']/@queueLength" -PSPath IIS:\ -Value 25000
-Set-WebConfigurationProperty -pspath 'MACHINE/WEBROOT/APPHOST/WSUS Administration'  -filter "system.web/httpRuntime" -name "executionTimeout" -value "00:10:50"
-
 New-Item -Path D: -Name WSUS -ItemType Directory
 Set-Location -Path "C:\Program Files\Update Services\Tools"
 .\wsusutil.exe postinstall CONTENT_DIR=D:\WSUS
@@ -72,5 +67,10 @@ $subscription.Save()
  
 #Kick off a synchronization
 $subscription.StartSynchronization()
+
+#Optimizing IIS configurations for WSUS
+Set-WebConfiguration "/system.applicationHost/applicationPools/add[@name='WsusPool']/recycling/periodicRestart/@privateMemory" -PSPath IIS:\ -Value 4194304
+Set-WebConfiguration "/system.applicationHost/applicationPools/add[@name='WsusPool']/@queueLength" -PSPath IIS:\ -Value 25000
+Set-WebConfigurationProperty -pspath 'MACHINE/WEBROOT/APPHOST/WSUS Administration'  -filter "system.web/httpRuntime" -name "executionTimeout" -value "00:10:50"
 
 Stop-Transcript

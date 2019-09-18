@@ -863,4 +863,7 @@ Resources:
         FromPort: '8531'
         ToPort: '8531'
         CidrIp: 10.0.0.0/0
-Outputs: {}
+Outputs:
+  InstanceIP:
+    Description: "Private IP of WSUS Instance"
+    Value: !GetAtt WSUSInstance.PrivateIp
