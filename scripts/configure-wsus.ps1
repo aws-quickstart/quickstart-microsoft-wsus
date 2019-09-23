@@ -69,8 +69,16 @@ $subscription.Save()
 $subscription.StartSynchronization()
 
 #Optimizing IIS configurations for WSUS
+$webconfig = Get-Content -Path "C:\Program Files\Update Services\WebServices\ClientWebService\web.config"
+$webconfig = $webconfig.Replace('<httpRuntime maxRequestLength="4096"', '<httpRuntime maxRequestLength="204800" executionTimeout="7200"')
+Set-Content -Path "C:\Program Files\Update Services\WebServices\ClientWebService\web2.config" -Value $webconfig -Force
+Get-Service -Name WsusService | Restart-Service -Verbose
 Set-WebConfiguration "/system.applicationHost/applicationPools/add[@name='WsusPool']/recycling/periodicRestart/@privateMemory" -PSPath IIS:\ -Value 4194304
 Set-WebConfiguration "/system.applicationHost/applicationPools/add[@name='WsusPool']/@queueLength" -PSPath IIS:\ -Value 25000
 Set-WebConfigurationProperty -pspath 'MACHINE/WEBROOT/APPHOST/WSUS Administration'  -filter "system.web/httpRuntime" -name "executionTimeout" -value "00:10:50"
+Set-ItemProperty -Path 'IIS:\AppPools\WsusPool' -Name CPU.resetInterval -Value '00:15:00'
+Set-ItemProperty -Path 'IIS:\Sites\WSUS Administration' -Name limits.connectionTimeout -Value '00:05:20'
+IISReset
+
 
 Stop-Transcript
