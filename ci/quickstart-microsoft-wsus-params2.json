@@ -1,0 +1,26 @@
+[
+    {
+        "ParameterKey": "AvailabilityZones",
+        "ParameterValue": "$[taskcat_getaz_2]",
+        "UsePreviousValue": false
+    },
+    {
+        "ParameterKey": "KeyPairName",
+        "ParameterValue": "$[taskcat_getkeypair]",
+        "UsePreviousValue": false
+    },
+    {   
+        "ParameterKey": "RemoteAccessCIDR",
+        "ParameterValue": "10.0.0.0/16",
+        "UsePreviousValue": false
+    },
+    {
+        "ParameterKey": "QSS3BucketName",
+        "ParameterValue": "$[taskcat_autobucket]"
+    },
+    {
+        "ParameterKey": "OperatorEmail",
+        "ParameterValue": "davmayd@amazon.com",
+        "UsePreviousValue": false
+    }
+]
