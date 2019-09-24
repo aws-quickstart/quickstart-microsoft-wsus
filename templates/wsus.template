@@ -1,0 +1,947 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "This workload template deploys a WSUS instance in an existing VPC. **WARNING** This template creates EC2 instances and related resources. You will be billed for the AWS resources used if you create a stack from this template.",
+    "Metadata": {
+        "AWS::CloudFormation::Interface": {
+            "ParameterGroups": [
+                {
+                    "Label": {
+                        "default": "Network Configuration"
+                    },
+                    "Parameters": [
+                        "VPCID",
+                        "PrivateSubnet1ID",
+                        "PrivateSubnet2ID",
+                        "PublicSubnet1ID",
+                        "PublicSubnet2ID"
+                    ]
+                },
+                {
+                    "Label": {
+                        "default": "Microsoft Active Directory Configuration"
+                    },
+                    "Parameters": [
+                        "DomainDNSName",
+                        "DomainNetBIOSName",
+                        "DomainAdminUser",
+                        "DomainAdminPassword",
+                        "DomainMemberSGID"
+                    ]
+                },
+                {
+                    "Label": {
+                        "default": "Amazon EC2 Configuration"
+                    },
+                    "Parameters": [
+                        "WSUSServerNetBIOSName",
+						"KeyPairName",
+                        "BastionSecurityGroupID",
+						"WindowsVersion",
+                        "WorkloadInstanceType"
+                    ]
+                },
+                {
+                    "Label": {
+                        "default": "WSUS Configuration"
+                    },
+                    "Parameters": [
+						"WSUSLanguagesList",
+                        "WSUSProductList",
+                        "WSUSClassification",
+						"WSUSNumOfSyncsPerDay"
+                    ]
+                },
+                {
+                    "Label": {
+                        "default": "AWS Quick Start Configuration"
+                    },
+                    "Parameters": [
+                        "QSS3BucketName",
+                        "QSS3KeyPrefix"
+                    ]
+                }
+            ],
+            "ParameterLabels": {
+                "BastionSecurityGroupID": {
+                    "default": "Bastion Security Group ID"
+                },
+                "KeyPairName": {
+                    "default": "SSH Key Name"
+                },
+                "PrivateSubnet1ID": {
+                    "default": "Private Subnet 1 ID"
+                },
+                "QSS3BucketName": {
+                    "default": "Quick Start S3 Bucket Name"
+                },
+                "QSS3KeyPrefix": {
+                    "default": "Quick Start S3 Key Prefix"
+                },
+                "VPCID": {
+                    "default": "VPC ID"
+                },
+                "WorkloadInstanceType": {
+                    "default": "Workload Servers Instance Type"
+                },
+				"DomainAdminPassword": {
+                    "default": "Domain Admin Password"
+                },
+                "DomainAdminUser": {
+                    "default": "Domain Admin User Name"
+                },
+                "DomainDNSName": {
+                    "default": "Domain DNS Name"
+                },
+                "DomainMemberSGID": {
+                    "default": "Security Group ID for AD Domain Members"
+                },
+                "DomainNetBIOSName": {
+                    "default": "Domain NetBIOS Name"
+                },
+				"WSUSServerNetBIOSName": {
+                    "default": "Server NetBIOS Name"
+                },
+				"WSUSLanguagesList": {
+					"default": "Supported languages"
+				},
+				"WSUSProductList": {
+					"default": "WSUS Products"
+				},
+				"WSUSClassification": {
+					"default": "WSUS Classifications"
+				},
+				"WSUSNumOfSyncsPerDay": {
+					"default": "Number of WSUS Synchronizations per day"
+				},
+				"WindowsVersion": {
+					"default": "Windows version"
+				}
+            }
+        }
+    },
+    "Parameters": {
+        "BastionSecurityGroupID": {
+            "Description": "ID of the bastion host security group to enable SSH connections (e.g., sg-7f16e910)",
+            "Type": "AWS::EC2::SecurityGroup::Id"
+        },
+        "KeyPairName": {
+            "Description": "Name of an existing EC2 key pair. All instances will launch with this key pair.",
+            "Type": "AWS::EC2::KeyPair::KeyName"
+        },
+        "PrivateSubnet1ID": {
+            "Description": "ID of private subnet 1 in Availability Zone 1 for the Workload (e.g., subnet-a0246dcd)",
+            "Type": "AWS::EC2::Subnet::Id"
+        },
+        "QSS3BucketName": {
+            "AllowedPattern": "^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$",
+            "ConstraintDescription": "Quick Start bucket name can include numbers, lowercase letters, uppercase letters, and hyphens (-). It cannot start or end with a hyphen (-).",
+            "Default": "aws-quickstart",
+            "Description": "S3 bucket name for the Quick Start assets. This string can include numbers, lowercase letters, uppercase letters, and hyphens (-). It cannot start or end with a hyphen (-).",
+            "Type": "String"
+        },
+        "QSS3KeyPrefix": {
+            "AllowedPattern": "^[0-9a-zA-Z-/]*$",
+            "ConstraintDescription": "Quick Start key prefix can include numbers, lowercase letters, uppercase letters, hyphens (-), and forward slash (/).",
+            "Default": "quickstart-microsoft-wsus/",
+            "Description": "S3 key prefix for the Quick Start assets. Quick Start key prefix can include numbers, lowercase letters, uppercase letters, hyphens (-), and forward slash (/).",
+            "Type": "String"
+        },
+        "VPCID": {
+            "Description": "ID of your existing VPC for deployment",
+            "Type": "AWS::EC2::VPC::Id"
+        },
+		"WSUSServerNetBIOSName": {
+            "AllowedPattern": "[a-zA-Z0-9\\-]+",
+            "Default": "WSUS",
+            "Description": "NetBIOS name of the WSUS server (up to 15 characters)",
+            "MaxLength": "15",
+            "MinLength": "1",
+            "Type": "String"
+        },
+		"DomainAdminPassword": {
+            "AllowedPattern": "(?=^.{6,255}$)((?=.*\\d)(?=.*[A-Z])(?=.*[a-z])|(?=.*\\d)(?=.*[^A-Za-z0-9])(?=.*[a-z])|(?=.*[^A-Za-z0-9])(?=.*[A-Z])(?=.*[a-z])|(?=.*\\d)(?=.*[A-Z])(?=.*[^A-Za-z0-9]))^.*",
+            "Description": "Password for the domain admin user. Must be at least 8 characters containing letters, numbers and symbols",
+            "MaxLength": "32",
+            "MinLength": "8",
+            "NoEcho": "true",
+            "Type": "String"
+        },
+        "DomainAdminUser": {
+            "AllowedPattern": "[a-zA-Z0-9]*",
+            "Default": "StackAdmin",
+            "Description": "User name for the account that will be used as Domain Administrator. This is separate from the default \"Administrator\" account",
+            "MaxLength": "25",
+            "MinLength": "5",
+            "Type": "String"
+        },
+        "DomainDNSName": {
+            "AllowedPattern": "[a-zA-Z0-9\\-]+\\..+",
+            "Default": "example.com",
+            "Description": "Fully qualified domain name (FQDN) e.g. example.com",
+            "MaxLength": "255",
+            "MinLength": "2",
+            "Type": "String"
+        },
+        "DomainMemberSGID": {
+            "Description": "ID of the Domain Member Security Group (e.g., sg-7f16e910)",
+            "Type": "AWS::EC2::SecurityGroup::Id"
+        },
+        "DomainNetBIOSName": {
+            "AllowedPattern": "[a-zA-Z0-9\\-]+",
+            "Default": "EXAMPLE",
+            "Description": "NetBIOS name of the domain (up to 15 characters) for users of earlier versions of Windows e.g. EXAMPLE",
+            "MaxLength": "15",
+            "MinLength": "1",
+            "Type": "String"
+        },
+		"WSUSLanguagesList": {
+            "Default": "en",
+            "Description": "Configure WSUS enabled languages with a comma delimited list of languages",
+            "Type": "String"
+        },
+		"WSUSProductList": {
+            "Default": "SQL Server 2012 R2, SQL Server 2016, SQL Server 2017, Windows Server 2012 R2, Windows Server 2016, Windows Server 2019",
+            "Description": "Configure the Platforms that you want WSUS to receive updates",
+            "Type": "String"
+        },
+		"WSUSClassification": {
+            "Default": "Applications, Update Rollups, Security Updates, Critical Updates, Service Packs, Updates, Drivers, Driver Sets",
+            "Description": "Configure WSUS classifications",
+            "Type": "String"
+        },
+		"WSUSNumOfSyncsPerDay": {
+            "Default": "1",
+            "Description": "Configure number of WSUS synchronizations per day",
+            "Type": "Number"
+        },
+        "WindowsVersion": {
+            "AllowedValues": [
+                "Windows2019Full",
+                "Windows2019Core"
+            ],
+            "ConstraintDescription": "Must be one of supported Windows versions",
+            "Default": "Windows2019Core",
+            "Description": "Select Windows version to run WSUS. Windows Core is recommended for production environments.",
+            "Type": "String"
+        },
+        "WorkloadInstanceType": {
+            "AllowedValues": [
+                "t2.large",
+                "m4.large",
+                "m4.xlarge",
+                "m4.2xlarge",
+                "m4.4xlarge",
+                "m4.10xlarge",
+                "m3.medium",
+                "m3.large",
+                "m3.xlarge",
+                "m3.2xlarge",
+                "c4.large",
+                "c4.xlarge",
+                "c4.2xlarge",
+                "c4.4xlarge",
+                "c4.8xlarge",
+                "c3.large",
+                "c3.xlarge",
+                "c3.2xlarge",
+                "c3.4xlarge",
+                "c3.8xlarge",
+                "r3.large",
+                "r3.xlarge"
+            ],
+            "ConstraintDescription": "Must contain valid instance type",
+            "Default": "m4.xlarge",
+            "Description": "Type of EC2 instance for the Workload instances",
+            "Type": "String"
+        }
+    },
+	"Conditions": {
+        "GovCloudCondition": {
+            "Fn::Equals": [
+                {
+                    "Ref": "AWS::Region"
+                },
+                "us-gov-west-1"
+            ]
+        },
+		"WindowsFullSelected": {
+			"Fn::Equals": [
+				{
+					"Ref": "WindowsVersion"
+				},
+				"Windows2019Full"
+			]
+		}
+	},
+    "Rules": {
+        "KeyPairsNotEmpty": {
+            "Assertions": [
+                {
+                    "Assert": {
+                        "Fn::Not": [
+                            {
+                                "Fn::EachMemberEquals": [
+                                    {
+                                        "Fn::RefAll": "AWS::EC2::KeyPair::KeyName"
+                                    },
+                                    ""
+                                ]
+                            }
+                        ]
+                    },
+                    "AssertDescription": "All key pair parameters must not be empty"
+                }
+            ]
+        },
+        "SubnetsInVPC": {
+            "Assertions": [
+                {
+                    "Assert": {
+                        "Fn::EachMemberIn": [
+                            {
+                                "Fn::ValueOfAll": [
+                                    "AWS::EC2::Subnet::Id",
+                                    "VpcId"
+                                ]
+                            },
+                            {
+                                "Fn::RefAll": "AWS::EC2::VPC::Id"
+                            }
+                        ]
+                    },
+                    "AssertDescription": "All subnets must in the VPC"
+                }
+            ]
+        }
+    },
+    "Resources": {    
+		"WinFullBaseAMIInfo": {
+          "Type": "Custom::WinFullBaseAMIInfo",
+          "Properties": {
+            "ServiceToken": { "Fn::GetAtt" : ["AMIInfoFunction", "Arn"] },
+            "Region": { "Ref": "AWS::Region" },
+			"AMIName": "Windows_Server-2019-English-Full-Base*"
+          }
+        },
+		"WinCoreBaseAMIInfo": {
+          "Type": "Custom::WinCoreBaseAMIInfo",
+          "Properties": {
+            "ServiceToken": { "Fn::GetAtt" : ["AMIInfoFunction", "Arn"] },
+            "Region": { "Ref": "AWS::Region" },
+			"AMIName": "Windows_Server-2019-English-Core-Base*"
+          }
+        },
+        "AMIInfoFunction": {
+          "Type": "AWS::Lambda::Function",
+          "Properties": {
+            "Code": {
+                "ZipFile": { "Fn::Join": ["", [
+                    "\/**\n",
+                    "* A Lambda function that looks up the latest AMI ID for a given region and architecture.\n",
+                    "**\/\n",
+                    "var aws = require(\"aws-sdk\");\n",
+                    "exports.handler = function(event, context) {\n",
+                    "    console.log(\"REQUEST RECEIVED:\\n\" + JSON.stringify(event));\n",
+                    "    \/\/ For Delete requests, immediately send a SUCCESS response.\n",
+                    "    if (event.RequestType == \"Delete\") {\n",
+                    "        sendResponse(event, context, \"SUCCESS\");\n",
+                    "        return;\n",
+                    "    }\n",
+                    "    var responseStatus = \"FAILED\";\n",
+                    "    var responseData = {};\n",
+                    "    var ec2 = new aws.EC2({region: event.ResourceProperties.Region});\n",
+                    "    var describeImagesParams = {\n",
+                    "        Filters: [{ Name: \"name\", Values: [event.ResourceProperties.AMIName]}],\n",
+                    "        Owners: [\"amazon\"]\n",
+                    "    };\n",
+                    "    \/\/ Get AMI IDs with the specified name pattern and owner\n",
+                    "    ec2.describeImages(describeImagesParams, function(err, describeImagesResult) {\n",
+                    "        if (err) {\n",
+                    "            responseData = {Error: \"DescribeImages call failed\"};\n",
+                    "            console.log(responseData.Error + \":\\n\", err);\n",
+                    "        }\n",
+                    "        else {\n",
+                    "            var images = describeImagesResult.Images;\n",
+                    "            \/\/ Sort images by name in decscending order. The names contain the AMI version, formatted as YYYY.MM.Ver.\n",
+                    "            images.sort(function(x, y) { return y.CreationDate.localeCompare(x.CreationDate); });\n",
+                    "            for (var j = 0; j < images.length; j++) {\n",
+                    "                if (isBeta(images[j].Name)) continue;\n",
+                    "                responseStatus = \"SUCCESS\";\n",
+                    "                responseData[\"Id\"] = images[j].ImageId;\n",
+                    "                break;\n",
+                    "            }\n",
+                    "        }\n",
+                    "        sendResponse(event, context, responseStatus, responseData);\n",
+                    "    });\n",
+                    "};\n",
+                    "\n",
+                    "\/\/ Check if the image is a beta or rc image. The Lambda function won't return any of those images.\n",
+                    "function isBeta(imageName) {\n",
+                    "    return imageName.toLowerCase().indexOf(\"beta\") > -1 || imageName.toLowerCase().indexOf(\".rc\") > -1;\n",
+                    "}\n",
+                    "\/\/ Send response to the pre-signed S3 URL \n",
+                    "function sendResponse(event, context, responseStatus, responseData) {\n",
+                    "    var responseBody = JSON.stringify({\n",
+                    "        Status: responseStatus,\n",
+                    "        Reason: \"See the details in CloudWatch Log Stream: \" + context.logStreamName,\n",
+                    "        PhysicalResourceId: context.logStreamName,\n",
+                    "        StackId: event.StackId,\n",
+                    "        RequestId: event.RequestId,\n",
+                    "        LogicalResourceId: event.LogicalResourceId,\n",
+                    "        Data: responseData\n",
+                    "    });\n",
+                    "    console.log(\"RESPONSE BODY:\\n\", responseBody);\n",
+                    "    var https = require(\"https\");\n",
+                    "    var url = require(\"url\");\n",
+                    "    var parsedUrl = url.parse(event.ResponseURL);\n",
+                    "    var options = {\n",
+                    "        hostname: parsedUrl.hostname,\n",
+                    "        port: 443,\n",
+                    "        path: parsedUrl.path,\n",
+                    "        method: \"PUT\",\n",
+                    "        headers: {\n",
+                    "            \"content-type\": \"\",\n",
+                    "            \"content-length\": responseBody.length\n",
+                    "        }\n",
+                    "    };\n",
+                    "    console.log(\"SENDING RESPONSE...\\n\");\n",
+                    "    var request = https.request(options, function(response) {\n",
+                    "        console.log(\"STATUS: \" + response.statusCode);\n",
+                    "        console.log(\"HEADERS: \" + JSON.stringify(response.headers));\n",
+                    "        \/\/ Tell AWS Lambda that the function execution is done  \n",
+                    "        context.done();\n",
+                    "    });\n",
+                    "    request.on(\"error\", function(error) {\n",
+                    "        console.log(\"sendResponse Error:\" + error);\n",
+                    "        \/\/ Tell AWS Lambda that the function execution is done  \n",
+                    "        context.done();\n",
+                    "    });\n",
+                    "    \/\/ write data to request body\n",
+                    "    request.write(responseBody);\n",
+                    "    request.end();\n",
+                    "}"
+                ]]}
+            },
+            "Handler": "index.handler",
+            "Role": { "Fn::GetAtt" : ["AMIInfoFunctionLambdaExecutionRole", "Arn"] },        
+            "Runtime": "nodejs8.10",
+            "Timeout": "30"
+          }
+        },
+        "AMIInfoFunctionLambdaExecutionRole": {
+          "Type": "AWS::IAM::Role",
+          "Properties": {
+            "AssumeRolePolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [{
+                  "Effect": "Allow",
+                  "Principal": {"Service": ["lambda.amazonaws.com"]},
+                  "Action": ["sts:AssumeRole"]
+              }]
+            },
+            "Path": "/",
+            "Policies": [{
+              "PolicyName": "root",
+              "PolicyDocument": {
+                "Version": "2012-10-17",
+                "Statement": [{
+                    "Effect": "Allow",
+                    "Action": ["logs:CreateLogGroup","logs:CreateLogStream","logs:PutLogEvents"],
+                    "Resource": "arn:aws:logs:*:*:*"
+                },
+                {
+                    "Effect": "Allow",
+                    "Action": ["ec2:DescribeImages"],
+                    "Resource": "*"
+                }]
+              }
+            }]
+          }
+        },
+		"WSUSInstance": {
+            "Type": "AWS::EC2::Instance",
+            "Metadata": {
+                "AWS::CloudFormation::Authentication": {
+                    "S3AccessCreds": {
+                        "type": "S3",
+                        "roleName": {
+                            "Ref": "WSUSRole"
+                        },
+                        "buckets": [
+                            {
+                                "Ref": "QSS3BucketName"
+                            }
+                        ]
+                    }
+                },
+                "AWS::CloudFormation::Init": {
+                    "configSets": {
+                        "config": [
+                            "FetchResources",
+                            "QuickStartSetup",
+                            "Prep",
+							"Install",
+                            "Cleanup",
+                            "Finalize"
+                        ]
+                    },
+                    "FetchResources": {
+                        "files": {
+                            "C:\\cfn\\scripts\\Unzip-Archive.ps1": {
+                                "source": {
+                                    "Fn::Sub": [
+                                        "https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}submodules/quickstart-microsoft-utilities/scripts/Unzip-Archive.ps1",
+                                        {
+                                            "QSS3Region": {
+                                                "Fn::If": [
+                                                    "GovCloudCondition",
+                                                    "s3-us-gov-west-1",
+                                                    "s3"
+                                                ]
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            "C:\\cfn\\modules\\AWSQuickStart.zip": {
+                                "source": {
+                                    "Fn::Sub": [
+                                        "https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}submodules/quickstart-microsoft-utilities/modules/AWSQuickStart.zip",
+                                        {
+                                            "QSS3Region": {
+                                                "Fn::If": [
+                                                    "GovCloudCondition",
+                                                    "s3-us-gov-west-1",
+                                                    "s3"
+                                                ]
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            "C:\\cfn\\scripts\\Join-Domain.ps1": {
+                                "source": {
+                                    "Fn::Sub": [
+                                        "https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}submodules/quickstart-microsoft-utilities/scripts/Join-Domain.ps1",
+                                        {
+                                            "QSS3Region": {
+                                                "Fn::If": [
+                                                    "GovCloudCondition",
+                                                    "s3-us-gov-west-1",
+                                                    "s3"
+                                                ]
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            "C:\\cfn\\scripts\\Rename-Computer.ps1": {
+                                "source": {
+                                    "Fn::Sub": [
+                                        "https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}submodules/quickstart-microsoft-utilities/scripts/Rename-Computer.ps1",
+                                        {
+                                            "QSS3Region": {
+                                                "Fn::If": [
+                                                    "GovCloudCondition",
+                                                    "s3-us-gov-west-1",
+                                                    "s3"
+                                                ]
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            "C:\\cfn\\scripts\\Restart-Computer.ps1": {
+                                "source": {
+                                    "Fn::Sub": [
+                                        "https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}submodules/quickstart-microsoft-utilities/scripts/Restart-Computer.ps1",
+                                        {
+                                            "QSS3Region": {
+                                                "Fn::If": [
+                                                    "GovCloudCondition",
+                                                    "s3-us-gov-west-1",
+                                                    "s3"
+                                                ]
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            "C:\\cfn\\scripts\\Enable-CredSSP.ps1": {
+                                "source": {
+                                    "Fn::Sub": [
+                                        "https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}submodules/quickstart-microsoft-utilities/scripts/Enable-CredSSP.ps1",
+                                        {
+                                            "QSS3Region": {
+                                                "Fn::If": [
+                                                    "GovCloudCondition",
+                                                    "s3-us-gov-west-1",
+                                                    "s3"
+                                                ]
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            "C:\\cfn\\scripts\\Disable-CredSSP.ps1": {
+                                "source": {
+                                    "Fn::Sub": [
+                                        "https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}submodules/quickstart-microsoft-utilities/scripts/Disable-CredSSP.ps1",
+                                        {
+                                            "QSS3Region": {
+                                                "Fn::If": [
+                                                    "GovCloudCondition",
+                                                    "s3-us-gov-west-1",
+                                                    "s3"
+                                                ]
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            "C:\\cfn\\scripts\\install-wsus.ps1": {
+                                "source": {
+                                    "Fn::Sub": [
+                                        "https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/install-wsus.ps1",
+                                        {
+                                            "QSS3Region": {
+                                                "Fn::If": [
+                                                    "GovCloudCondition",
+                                                    "s3-us-gov-west-1",
+                                                    "s3"
+                                                ]
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "QuickStartSetup": {
+                        "commands": {
+                            "a-set-execution-policy": {
+                                "command": "powershell.exe -Command \"Set-ExecutionPolicy RemoteSigned -Force\"",
+                                "waitAfterCompletion": "0"
+                            },
+                            "b-unpack-quickstart-module": {
+                                "command": "powershell.exe -Command C:\\cfn\\scripts\\Unzip-Archive.ps1 -Source C:\\cfn\\modules\\AWSQuickStart.zip -Destination C:\\Windows\\system32\\WindowsPowerShell\\v1.0\\Modules\\",
+                                "waitAfterCompletion": "0"
+                            },
+                            "c-init-quickstart-module": {
+                                "command": {
+                                    "Fn::Join": [
+                                        "",
+                                        [
+                                            "powershell.exe -Command \"",
+                                            "New-AWSQuickStartWaitHandle -Handle '",
+                                            {
+                                                "Ref": "WSUSServerWaitHandle"
+                                            },
+                                            "'\""
+                                        ]
+                                    ]
+                                },
+                                "waitAfterCompletion": "0"
+                            }
+                        }
+                    },
+                    "Prep": {
+                        "commands": {
+							"a-initialize-disks": {
+                                "command": "powershell.exe -Command \"C:\\ProgramData\\Amazon\\EC2-Windows\\Launch\\Scripts\\InitializeDisks.ps1\"",
+                                "waitAfterCompletion": "0"
+                            },
+                            "b-rename-computer": {
+                                "command": {
+                                    "Fn::Join": [
+                                        "",
+                                        [
+                                            "powershell.exe -Command \"C:\\cfn\\scripts\\Rename-Computer.ps1 -Restart -NewName '",
+                                            {
+                                                "Ref": "WSUSServerNetBIOSName"
+                                            },
+                                            "'\""
+                                        ]
+                                    ]
+                                },
+                                "waitAfterCompletion": "forever"
+                            },
+                            "c-join-domain": {
+                                "command": {
+                                    "Fn::Join": [
+                                        "",
+                                        [
+                                            "powershell.exe -Command \"C:\\cfn\\scripts\\Join-Domain.ps1 -DomainName '",
+                                            {
+                                                "Ref": "DomainDNSName"
+                                            },
+                                            "' -UserName '",
+                                            {
+                                                "Ref": "DomainNetBIOSName"
+                                            },
+                                            "\\",
+                                            {
+                                                "Ref": "DomainAdminUser"
+                                            },
+                                            "' -Password '",
+                                            {
+                                                "Ref": "DomainAdminPassword"
+                                            },
+                                            "'\""
+                                        ]
+                                    ]
+                                },
+                                "waitAfterCompletion": "forever"
+                            },
+                            "d-reboot": {
+                                "command": "powershell.exe -Command \"C:\\cfn\\scripts\\Restart-Computer.ps1\"",
+                                "waitAfterCompletion": "forever"
+                            },
+							"e-enable-credssp": {
+                                "command": "powershell.exe -ExecutionPolicy RemoteSigned -Command \"C:\\cfn\\scripts\\Enable-CredSSP.ps1",
+                                "waitAfterCompletion": "0"
+                            }
+                        }
+                    },
+					"Install": {
+                        "commands": {
+                            "a-install-wsus": {
+                                "command": "powershell.exe -Command \"Install-WindowsFeature -Name UpdateServices -IncludeManagementTools\"",
+                                "waitAfterCompletion": "0"
+                            },
+							"b-configure-wsus": {
+                                "command": { "Fn::Join": [ "", 
+									[ 
+										"powershell.exe -ExecutionPolicy RemoteSigned -Command \"C:\\cfn\\scripts\\install-wsus.ps1 -langs \\\"",
+										{
+                                                "Ref": "WSUSLanguagesList"
+                                        },
+										"\\\" -products \\\"",
+										{
+                                                "Ref": "WSUSProductList"
+                                        },
+										"\\\" -classifications \\\"",
+										{
+                                                "Ref": "WSUSClassification"
+                                        },
+										"\\\" -numOfSyncsPerDay ",
+										{
+                                                "Ref": "WSUSNumOfSyncsPerDay"
+                                        },
+										"\""
+									] 
+								] },
+                                "waitAfterCompletion": "0"
+                            }
+                        }
+                    },
+                    "Cleanup": {
+                        "commands": {
+                            "a-disable-credssp": {
+                                "command": "powershell.exe -ExecutionPolicy RemoteSigned -Command \"C:\\cfn\\scripts\\Disable-CredSSP.ps1\"",
+                                "waitAfterCompletion": "0"
+                            }
+                        }
+                    },
+                    "Finalize": {
+                        "commands": {
+                            "a-signal-success": {
+                                "command": "powershell -Command \"Write-AWSQuickStartStatus\"",
+                                "waitAfterCompletion": "0"
+                            }
+                        }
+                    }
+                }
+            },
+            "Properties": {
+                "ImageId": {
+					"Fn::If": [
+						"WindowsFullSelected",
+						{ "Fn::GetAtt": [ "WinFullBaseAMIInfo", "Id" ] },
+						{ "Fn::GetAtt": [ "WinCoreBaseAMIInfo", "Id" ] }
+					]
+				},
+                "IamInstanceProfile": {
+                    "Ref": "WSUSProfile"
+                },
+                "InstanceType": {
+                    "Ref": "WorkloadInstanceType"
+                },
+                "NetworkInterfaces": [
+                    {
+                        "DeleteOnTermination": "true",
+                        "DeviceIndex": 0,
+                        "SubnetId": {
+                                    "Ref": "PrivateSubnet1ID"
+                                },
+                        "GroupSet": [
+                            {
+                                "Ref": "DomainMemberSGID"
+                            },
+                            {
+                                "Ref": "WorkloadSecurityGroup"
+                            }
+                        ]
+                    }
+                ],
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Ref": "WSUSServerNetBIOSName"
+                        }
+                    }
+                ],
+                "BlockDeviceMappings": [
+                    {
+                        "DeviceName": "/dev/sda1",
+                        "Ebs": {
+                            "VolumeSize": "100",
+                            "VolumeType": "gp2"
+                        }
+                    },
+					{
+                        "DeviceName": "/dev/sdm",
+                        "Ebs": {
+                            "VolumeSize": "500",
+                            "VolumeType": "gp2"
+                        }
+                    }
+                ],
+                "KeyName": {
+                    "Ref": "KeyPairName"
+                },
+                "UserData": {
+                    "Fn::Base64": {
+                        "Fn::Join": [
+                            "",
+                            [
+                                "<script>\n",
+                                "cfn-init.exe -v -c config -s ",
+                                {
+                                    "Ref": "AWS::StackId"
+                                },
+                                " -r WSUSInstance ",
+                                " --region ",
+                                {
+                                    "Ref": "AWS::Region"
+                                },
+                                "\n",
+                                "</script>"
+                            ]
+                        ]
+                    }
+                }
+            }
+        },
+		"WSUSRole": {
+            "Type": "AWS::IAM::Role",
+            "Properties": {
+                "Policies": [
+                    {
+                        "PolicyDocument": {
+                            "Version": "2012-10-17",
+                            "Statement": [
+                                {
+                                    "Action": [
+                                        "s3:GetObject"
+                                    ],
+                                    "Resource": {
+                                        "Fn::Sub": [
+                                            "arn:${Partition}:s3:::${QSS3BucketName}/${QSS3KeyPrefix}*",
+                                            {
+                                                "Partition": {
+                                                    "Fn::If": [
+                                                        "GovCloudCondition",
+                                                        "aws-us-gov",
+                                                        "aws"
+                                                    ]
+                                                }
+                                            }
+                                        ]
+                                    },
+                                    "Effect": "Allow"
+                                },
+								{
+                                    "Action": [
+                                        "s3:*"
+                                    ],
+                                    "Resource": "*",
+                                    "Effect": "Allow"
+                                }
+                            ]
+                        },
+                        "PolicyName": "aws-quick-start-s3-policy"
+                    }
+                ],
+                "Path": "/",
+                "AssumeRolePolicyDocument": {
+                    "Statement": [
+                        {
+                            "Action": [
+                                "sts:AssumeRole"
+                            ],
+                            "Principal": {
+                                "Service": [
+                                    "ec2.amazonaws.com"
+                                ]
+                            },
+                            "Effect": "Allow"
+                        }
+                    ],
+                    "Version": "2012-10-17"
+                }
+            }
+        },
+        "WSUSProfile": {
+            "Type": "AWS::IAM::InstanceProfile",
+            "Properties": {
+                "Roles": [
+                    {
+                        "Ref": "WSUSRole"
+                    }
+                ],
+                "Path": "/"
+            }
+        },
+        "WorkloadSecurityGroup": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+                "GroupDescription": "Allow access to the Workload instances",
+                "VpcId": {
+                    "Ref": "VPCID"
+                },
+                "SecurityGroupIngress": [
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "8530",
+                        "ToPort": "8530",
+                        "CidrIp": "10.0.0.0/0"
+                    },
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "8531",
+                        "ToPort": "8531",
+                        "CidrIp": "10.0.0.0/0"
+                    }
+                ]
+            }
+        },
+		"WSUSServerWaitCondition": {
+            "Type": "AWS::CloudFormation::WaitCondition",
+            "DependsOn": "WSUSInstance",
+            "Properties": {
+                "Handle": {
+                    "Ref": "WSUSServerWaitHandle"
+                },
+                "Timeout": "3600"
+            }
+        },
+        "WSUSServerWaitHandle": {
+            "Type": "AWS::CloudFormation::WaitConditionHandle"
+        }
+    },
+    "Outputs": {
+
+    }
+}
