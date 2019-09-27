@@ -1,57 +1,7 @@
-[
-    {
-        "ParameterKey": "ADServer1InstanceType",
-        "ParameterValue": "m5.large",
-        "UsePreviousValue": false
-    },
-    {
-        "ParameterKey": "ADServer1NetBIOSName",
-        "ParameterValue": "DC1",
-        "UsePreviousValue": false
-    },
-    {
-        "ParameterKey": "ADServer1PrivateIP",
-        "ParameterValue": "10.0.0.10",
-        "UsePreviousValue": false
-    },
-    {
-        "ParameterKey": "ADServer2InstanceType",
-        "ParameterValue": "m5.large",
-        "UsePreviousValue": false
-    },
-    {
-        "ParameterKey": "ADServer2NetBIOSName",
-        "ParameterValue": "DC2",
-        "UsePreviousValue": false
-    },
-    {
-        "ParameterKey": "ADServer2PrivateIP",
-        "ParameterValue": "10.0.64.10",
-        "UsePreviousValue": false
-    },
+[    
     {
         "ParameterKey": "AvailabilityZones",
         "ParameterValue": "$[taskcat_getaz_2]",
-        "UsePreviousValue": false
-    },
-    {
-        "ParameterKey": "DomainAdminPassword",
-        "ParameterValue": "Password1",
-        "UsePreviousValue": false
-    },
-    {
-        "ParameterKey": "DomainAdminUser",
-        "ParameterValue": "Admin",
-        "UsePreviousValue": false
-    },
-    {
-        "ParameterKey": "DomainDNSName",
-        "ParameterValue": "example.com",
-        "UsePreviousValue": false
-    },
-    {
-        "ParameterKey": "DomainNetBIOSName",
-        "ParameterValue": "example",
         "UsePreviousValue": false
     },
     {
@@ -80,16 +30,6 @@
         "UsePreviousValue": false
     },
     {
-        "ParameterKey": "RDGWInstanceType",
-        "ParameterValue": "m4.xlarge",
-        "UsePreviousValue": false
-    },
-    {   
-        "ParameterKey": "RDGWCIDR",
-        "ParameterValue": "10.0.0.0/16",
-        "UsePreviousValue": false
-    },
-    {
         "ParameterKey": "VPCCIDR",
         "ParameterValue": "10.0.0.0/16",
         "UsePreviousValue": false
@@ -99,68 +39,31 @@
         "ParameterValue": "$[taskcat_autobucket]"
     },
     {
-        "ParameterKey": "SQLServerVersion",
-        "ParameterValue": "2016",
-        "UsePreviousValue": false
+        "ParameterKey": "WSUSServerNetBIOSName",
+        "ParameterValue": "WSUS"
     },
     {
-        "ParameterKey": "SQLServiceAccount",
-        "ParameterValue": "sqlsa",
-        "UsePreviousValue": false
+        "ParameterKey": "WSUSLanguagesList",
+        "ParameterValue": "en"
     },
     {
-        "ParameterKey": "SQLServiceAccountPassword",
-        "ParameterValue": "$[taskcat_genpass_16]",
-        "UsePreviousValue": false
+        "ParameterKey": "WSUSProductList",
+        "ParameterValue": "SQL Server 2012 R2, SQL Server 2016, SQL Server 2017, Windows Server 2012 R2, Windows Server 2016, Windows Server 2019"
     },
     {
-        "ParameterKey": "WSFCNode1InstanceType",
-        "ParameterValue": "r5.2xlarge",
-        "UsePreviousValue": false
+        "ParameterKey": "WSUSClassification",
+        "ParameterValue": "Applications, Update Rollups, Security Updates, Critical Updates, Service Packs, Updates, Drivers, Driver Sets"
     },
     {
-        "ParameterKey": "WSFCNode1NetBIOSName",
-        "ParameterValue": "WSFC1",
-        "UsePreviousValue": false
+        "ParameterKey": "WSUSNumOfSyncsPerDay",
+        "ParameterValue": "1"
     },
     {
-        "ParameterKey": "WSFCNode1PrivateIP1",
-        "ParameterValue": "10.0.0.100",
-        "UsePreviousValue": false
+        "ParameterKey": "WindowsVersion",
+        "ParameterValue": "Windows2019Core"
     },
     {
-        "ParameterKey": "WSFCNode1PrivateIP2",
-        "ParameterValue": "10.0.0.101",
-        "UsePreviousValue": false
-    },
-    {
-        "ParameterKey": "WSFCNode1PrivateIP3",
-        "ParameterValue": "10.0.0.102",
-        "UsePreviousValue": false
-    },
-    {
-        "ParameterKey": "WSFCNode2InstanceType",
-        "ParameterValue": "r5.2xlarge",
-        "UsePreviousValue": false
-    },
-    {
-        "ParameterKey": "WSFCNode2NetBIOSName",
-        "ParameterValue": "WSFC2",
-        "UsePreviousValue": false
-    },
-    {
-        "ParameterKey": "WSFCNode2PrivateIP1",
-        "ParameterValue": "10.0.64.100",
-        "UsePreviousValue": false
-    },
-    {
-        "ParameterKey": "WSFCNode2PrivateIP2",
-        "ParameterValue": "10.0.64.101",
-        "UsePreviousValue": false
-    },
-    {
-        "ParameterKey": "WSFCNode2PrivateIP3",
-        "ParameterValue": "10.0.64.102",
-        "UsePreviousValue": false
-    }
+        "ParameterKey": "WorkloadInstanceType",
+        "ParameterValue": "m4.large"
+    }	
 ]
