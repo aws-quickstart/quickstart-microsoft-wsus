@@ -27,6 +27,7 @@ Metadata:
       - KeyPairName
       - WindowsVersion
       - WorkloadInstanceType
+      - StorageVolumeSize
     - Label:
         default: WSUS Configuration
       Parameters:
@@ -42,6 +43,8 @@ Metadata:
     ParameterLabels:
       KeyPairName:
         default: SSH Key Name
+      StorageVolumeSize:
+        default: Storage Volume Size
       PrivateSubnet1ID:
         default: Private Subnet 1 ID
       QSS3BucketName:
@@ -81,6 +84,10 @@ Parameters:
     Description: Name of an existing EC2 key pair. All instances will launch with
       this key pair.
     Type: AWS::EC2::KeyPair::KeyName
+  StorageVolumeSize:
+    Default: '500'
+    Description: Capacity of the volume used to store update files. (GB)
+    Type: Number
   PrivateSubnet1ID:
     Description: ID of private subnet 1 in Availability Zone 1 for the Workload (e.g.,
       subnet-a0246dcd)
@@ -185,22 +192,8 @@ Parameters:
     Type: String
   WorkloadInstanceType:
     AllowedValues:
-    - m4.large
-    - m4.xlarge
-    - m4.2xlarge
-    - m4.4xlarge
-    - m4.10xlarge
-    - m5a.large
-    - m5a.xlarge
-    - m5a.2xlarge
-    - m5a.4xlarge
-    - m5a.8xlarge
-    - m5.large
-    - m5.xlarge
-    - m5.2xlarge
-    - m5.4xlarge
-    - m5.8xlarge
-    - r5a.large
+    - t3a.2xlarge
+    - t3.2xlarge
     - r5a.xlarge
     - r5a.2xlarge
     - r5a.4xlarge
@@ -210,13 +203,14 @@ Parameters:
     - r5.2xlarge
     - r5.4xlarge
     - r5.8xlarge
-    - r4.large
     - r4.xlarge
     - r4.2xlarge
     - r4.4xlarge
     - r4.8xlarge
+    - z1d.large
+    - z1d.xlarge
     ConstraintDescription: Must contain valid instance type
-    Default: m4.2xlarge
+    Default: r5.2xlarge
     Description: Type of EC2 instance for the Workload instances
     Type: String
 Conditions:
@@ -719,14 +713,14 @@ Resources:
         - Fn::GetAtt:
           - WinFullBaseAMIInfo
           - Id
-        Fn::If:
-        - WindowsCoreSelected
-        - Fn::GetAtt:
-          - WinCoreBaseAMIInfo
-          - Id
-        - Fn::GetAtt:
-          - WinFullSQL2017StandardAMIInfo
-          - Id
+        - Fn::If:
+          - WindowsCoreSelected
+          - Fn::GetAtt:
+            - WinCoreBaseAMIInfo
+            - Id
+          - Fn::GetAtt:
+            - WinFullSQL2017StandardAMIInfo
+            - Id
       IamInstanceProfile:
         Ref: WSUSProfile
       InstanceType:
@@ -753,7 +747,7 @@ Resources:
           VolumeType: gp2
       - DeviceName: "/dev/sdm"
         Ebs:
-          VolumeSize: '500'
+          VolumeSize: !Sub "${StorageVolumeSize}"
           VolumeType: gp2
       KeyName:
         Ref: KeyPairName

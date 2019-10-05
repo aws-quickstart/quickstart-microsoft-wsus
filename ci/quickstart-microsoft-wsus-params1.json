@@ -9,6 +9,11 @@
         "ParameterValue": "$[taskcat_getkeypair]",
         "UsePreviousValue": false
     },
+	{
+        "ParameterKey": "StorageVolumeSize",
+        "ParameterValue": 500,
+        "UsePreviousValue": false
+    },
     {
         "ParameterKey": "PrivateSubnet1CIDR",
         "ParameterValue": "10.0.0.0/19",
