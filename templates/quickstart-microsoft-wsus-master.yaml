@@ -20,6 +20,7 @@ Metadata:
       - Label:
           default: Microsoft WSUS Configuration
         Parameters:
+          - HAOrSingle
           - WSUSInstanceType
           - LatestAmiId
           - WSFCNode1NetBIOSName
@@ -95,6 +96,8 @@ Metadata:
     ParameterLabels:
       AvailabilityZones:
         default: Availability Zones
+      HAOrSingle:
+        default: HA (two WSUS servers with a SQL database) or single-instance (single WSUS server with a WID database)
       ADServer1InstanceType:
         default: Domain Controller 1 Instance Type
       ADServer1NetBIOSName:
@@ -208,6 +211,14 @@ Parameters:
     Description: 'List of Availability Zones to use for the subnets in the VPC. Note:
       The logical order is preserved and only 2 AZs are used for this deployment.'
     Type: List<AWS::EC2::AvailabilityZone::Name>
+  HAOrSingle:
+    Description: "Select either highly-available (two WSUS servers with a SQL database
+      or single-instance (one WSUS server with a Windows Internal database"
+    AllowedValues:
+      - HA
+      - Single-instance
+    Default: Single-instance
+    Type: String
   ADServer1InstanceType:
     AllowedValues:
       - m4.large
@@ -568,6 +579,8 @@ Conditions:
   GovCloudCondition: !Equals
     - !Ref 'AWS::Region'
     - us-gov-west-1
+  HACondition: !Equals [!Ref HAOrSingle, HA]
+  SingleCondition: !Equals [!Ref HAOrSingle, Single-instance]
 Resources:
   VPCStack:
     Type: AWS::CloudFormation::Stack
@@ -644,6 +657,7 @@ Resources:
         VPCID: !GetAtt 'VPCStack.Outputs.VPCID'
   SQLStack:
     Type: AWS::CloudFormation::Stack
+    Condition: HACondition
     DependsOn: ADStack
     Properties:
       TemplateURL: !Sub
@@ -689,10 +703,11 @@ Resources:
         VPCID: !GetAtt 'VPCStack.Outputs.VPCID'
   WSUSStack:
     Type: AWS::CloudFormation::Stack
+    Condition: HACondition
     DependsOn: SQLStack
     Properties:
       TemplateURL: !Sub
-        - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}templates/quickstart-microsoft-wsus-workload.template
+        - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}templates/quickstart-microsoft-wsus-workload-HA.yaml
         - QSS3Region: !If
             - GovCloudCondition
             - s3-us-gov-west-1
@@ -714,6 +729,36 @@ Resources:
         PublicSubnet2ID: !GetAtt 'VPCStack.Outputs.PublicSubnet2ID'
         WSFCNode1NetBIOSName: !Ref 'WSFCNode1NetBIOSName'
         WSFCNode2NetBIOSName: !Ref 'WSFCNode2NetBIOSName'
+        QSS3BucketName: !Ref 'QSS3BucketName'
+        QSS3KeyPrefix: !Ref 'QSS3KeyPrefix'
+        VPCID: !GetAtt 'VPCStack.Outputs.VPCID'
+        VPCCIDR: !GetAtt 'VPCStack.Outputs.VPCCIDR'
+  WSUSSingleStack:
+    Type: AWS::CloudFormation::Stack
+    Condition: SingleCondition
+    DependsOn: ADStack
+    Properties:
+      TemplateURL: !Sub
+        - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}templates/quickstart-microsoft-wsus-workload-single.yaml
+        - QSS3Region: !If
+            - GovCloudCondition
+            - s3-us-gov-west-1
+            - s3
+      Parameters:
+        ADServer1PrivateIP: !Ref 'ADServer1PrivateIP'
+        ADServer2PrivateIP: !Ref 'ADServer2PrivateIP'
+        ADServer1NetBIOSName: !Ref 'ADServer1NetBIOSName'
+        ADServer2NetBIOSName: !Ref 'ADServer2NetBIOSName'
+        DomainAdminPassword: !Ref 'DomainAdminPassword'
+        DomainAdminUser: !Ref 'DomainAdminUser'
+        DomainDNSName: !Ref 'DomainDNSName'
+        DomainMemberSGID: !GetAtt 'ADStack.Outputs.DomainMemberSGID'
+        DomainNetBIOSName: !Ref 'DomainNetBIOSName'
+        KeyPairName: !Ref 'KeyPairName'
+        PrivateSubnet1ID: !GetAtt 'VPCStack.Outputs.PrivateSubnet1AID'
+        PrivateSubnet2ID: !GetAtt 'VPCStack.Outputs.PrivateSubnet2AID'
+        PublicSubnet1ID: !GetAtt 'VPCStack.Outputs.PublicSubnet1ID'
+        PublicSubnet2ID: !GetAtt 'VPCStack.Outputs.PublicSubnet2ID'
         QSS3BucketName: !Ref 'QSS3BucketName'
         QSS3KeyPrefix: !Ref 'QSS3KeyPrefix'
         VPCID: !GetAtt 'VPCStack.Outputs.VPCID'

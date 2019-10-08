@@ -1,77 +1,58 @@
 {
     "AWSTemplateFormatVersion": "2010-09-09",
-    "Description": "This master template creates a VPC infrastructure for a multi-AZ, multi-tier deployment of a workload on AWS. It deploys a VPC with bastions and a workload cluster behind an ELB. The cluster is configured to use an S3 bucket for storage  **WARNING** This template creates EC2 instances and related resources. You will be billed for the AWS resources used if you create a stack from this template.",
+    "Description": "This master template creates a VPC infrastructure for a multi-AZ, multi-tier deployment of a workload on AWS. It deploys a VPC and WSUS instance. **WARNING** This template creates EC2 instances and related resources. You will be billed for the AWS resources used if you create a stack from this template.",
     "Metadata": {
         "AWS::CloudFormation::Interface": {
             "ParameterGroups": [
-                {
-                    "Label": {
-                        "default": "Network Configuration"
-                    },
-                    "Parameters": [
-                        "AvailabilityZones",
-                        "VPCCIDR",
-                        "PrivateSubnet1CIDR",
-                        "PrivateSubnet2CIDR",
-                        "PublicSubnet1CIDR",
-                        "PublicSubnet2CIDR",
-                        "RemoteAccessCIDR"
-                    ]
-                },
-                {
-                    "Label": {
-                        "default": "Amazon EC2 Configuration"
-                    },
-                    "Parameters": [
-                        "KeyPairName",
-                        "BastionAMIOS",
-                        "BastionInstanceType",
-                        "WorkloadInstanceType"
-                    ]
-                },
-                {
-                    "Label": {
-                        "default": "Workload Nodes Configuration"
-                    },
-                    "Parameters": [
-                        "WorkloadNodesMinSize",
-                        "NodesMaxSize",
-                        "OperatorEmail"
-                    ]
-                },
-                {
-                    "Label": {
-                        "default": "Workload Storage Configuration"
-                    },
-                    "Parameters": [
-                        "S3BucketName"
-                    ]
-                },
-                {
-                    "Label": {
-                        "default": "AWS Quick Start Configuration"
-                    },
-                    "Parameters": [
-                        "QSS3BucketName",
-                        "QSS3KeyPrefix"
-                    ]
-                }
+				{
+				  "Label": {
+					"default": "Amazon VPC Configuration"
+				  },
+				  "Parameters": [
+					"VPCCIDR",
+					"AvailabilityZones",
+					"PrivateSubnet1CIDR",
+					"PrivateSubnet2CIDR",
+					"PublicSubnet1CIDR",
+					"PublicSubnet2CIDR"
+				  ]
+				},
+				{
+				  "Label": {
+					"default": "Amazon EC2 Configuration"
+				  },
+				  "Parameters": [
+					"WSUSServerNetBIOSName",
+					"KeyPairName",
+					"StorageVolumeSize",
+					"WindowsVersion",
+					"WorkloadInstanceType"
+				  ]
+				},
+				{
+				  "Label": {
+					"default": "WSUS Configuration"
+				  },
+				  "Parameters": [
+					"WSUSLanguagesList",
+					"WSUSProductList",
+					"WSUSClassification",
+					"WSUSNumOfSyncsPerDay"
+				  ]
+				},
+				{
+				  "Label": {
+					"default": "AWS Quick Start Configuration"
+				  },
+				  "Parameters": [
+					"QSS3BucketName",
+					"QSS3KeyPrefix"
+				  ]
+				}
             ],
             "ParameterLabels": {
                 "AvailabilityZones": {
                     "default": "Availability Zones"
-                },
-                "BastionAMIOS": {
-                    "default": "Bastion AMI Operating System"
-                },
-                "BastionInstanceType": {
-                    "default": "Bastion Instance Type"
-                },
-                "KeyPairName": {
-                    "default": "Key Pair Name"
-                },
-                "OperatorEmail": {
-                    "default": "Operator Email"
                 },
                 "PrivateSubnet1CIDR": {
                     "default": "Private Subnet 1 CIDR"
@@ -94,24 +75,36 @@
                 "S3BucketName": {
                     "default": "S3 Bucket Name"
                 },
-                "RemoteAccessCIDR": {
-                    "default": "Allowed Bastion External Access CIDR"
-                },
                 "VPCCIDR": {
                     "default": "VPC CIDR"
                 },
-                "WorkloadInstanceType": {
-                    "default": "Workload Servers Instance Type"
-                },
-                "WorkloadoNodesDesiredCapacity": {
-                    "default": "Workload Nodes Desired Capacity"
-                },
-                "WorkloadNodesMaxSize": {
-                    "default": "Workload Nodes Max Size"
-                },
-                "WorkloadNodesMinSize": {
-                    "default": "Workload Nodes Min Size"
-                }
+				"KeyPairName": {
+				  "default": "SSH Key Name"
+				},
+				"StorageVolumeSize": {
+				  "default": "Storage Volume Size"
+				},
+				"WorkloadInstanceType": {
+				  "default": "Workload Servers Instance Type"
+				},
+				"WSUSServerNetBIOSName": {
+				  "default": "Server NetBIOS Name"
+				},
+				"WSUSLanguagesList": {
+				  "default": "Supported languages"
+				},
+				"WSUSProductList": {
+				  "default": "WSUS Products"
+				},
+				"WSUSClassification": {
+				  "default": "WSUS Classifications"
+				},
+				"WSUSNumOfSyncsPerDay": {
+				  "default": "Number of WSUS Synchronizations per day"
+				},
+				"WindowsVersion": {
+				  "default": "Windows version"
+				}
             }
         }
     },
@@ -119,46 +112,6 @@
         "AvailabilityZones": {
             "Description": "List of Availability Zones to use for the subnets in the VPC. Only two Availability Zones are used for this deployment, and the logical order of your selections is preserved.",
             "Type": "List<AWS::EC2::AvailabilityZone::Name>"
-        },
-        "BastionAMIOS": {
-            "AllowedValues": [
-                "Amazon-Linux-HVM",
-                "CentOS-7-HVM",
-                "Ubuntu-Server-14.04-LTS-HVM",
-                "Ubuntu-Server-16.04-LTS-HVM"
-            ],
-            "Default": "Amazon-Linux-HVM",
-            "Description": "The Linux distribution for the AMI to be used for the bastion instances",
-            "Type": "String"
-        },
-        "BastionInstanceType": {
-            "AllowedValues": [
-                "t2.nano",
-                "t2.micro",
-                "t2.small",
-                "t2.medium",
-                "t2.large",
-                "m3.large",
-                "m3.xlarge",
-                "m3.2xlarge",
-                "m4.large",
-                "m4.xlarge",
-                "m4.2xlarge",
-                "m4.4xlarge"
-            ],
-            "Default": "t2.micro",
-            "Description": "Amazon EC2 instance type for the bastion instances",
-            "Type": "String"
-        },
-        "KeyPairName": {
-            "Description": "The name of an existing public/private key pair, which allows you to securely connect to your instance after it launches",
-            "Type": "AWS::EC2::KeyPair::KeyName"
-        },
-        "OperatorEmail": {
-            "AllowedPattern": "([a-zA-Z0-9_\\-\\.]+)@((\\[[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.)|(([a-zA-Z0-9\\-]+\\.)+))([a-zA-Z]{2,4}|[0-9]{1,3})(\\]?)",
-            "ConstraintDescription": "Must be a valid email address.",
-            "Description": "Email address that notifications of any scaling operations will be sent to",
-            "Type": "String"
         },
         "PrivateSubnet1CIDR": {
             "AllowedPattern": "^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\\/(1[6-9]|2[0-8]))$",
@@ -188,32 +141,6 @@
             "Description": "CIDR block for the public (DMZ) subnet 2 located in Availability Zone 2",
             "Type": "String"
         },
-        "QSS3BucketName": {
-            "AllowedPattern": "^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$",
-            "ConstraintDescription": "Quick Start bucket name can include numbers, lowercase letters, uppercase letters, and hyphens (-). It cannot start or end with a hyphen (-).",
-            "Default": "aws-quickstart",
-            "Description": "S3 bucket name for the Quick Start assets. This string can include numbers, lowercase letters, uppercase letters, and hyphens (-). It cannot start or end with a hyphen (-).",
-            "Type": "String"
-        },
-        "QSS3KeyPrefix": {
-            "AllowedPattern": "^[0-9a-zA-Z-/]*$",
-            "ConstraintDescription": "Quick Start key prefix can include numbers, lowercase letters, uppercase letters, hyphens (-), and forward slash (/).",
-            "Default": "quickstart-examples/",
-            "Description": "S3 key prefix for the Quick Start assets. Quick Start key prefix can include numbers, lowercase letters, uppercase letters, hyphens (-), and forward slash (/).",
-            "Type": "String"
-        },
-        "RemoteAccessCIDR": {
-            "AllowedPattern": "^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\\/([0-9]|[1-2][0-9]|3[0-2]))$",
-            "ConstraintDescription": "CIDR block parameter must be in the form x.x.x.x/x",
-            "Description": "The CIDR IP range that is permitted to access the bastions. We recommend that you set this value to a trusted IP range.",
-            "Type": "String"
-        },
-        "S3BucketName": {
-            "AllowedPattern": "^[a-z0-9][a-z0-9-.]*$",
-            "Default": "type-unique-value-here-in-lowercase",
-            "Description": "Name of the S3 bucket that will be created for your workload to store data. Enter a unique name that does not include uppercase characters.",
-            "Type": "String"
-        },
         "VPCCIDR": {
             "AllowedPattern": "^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\\/(1[6-9]|2[0-8]))$",
             "ConstraintDescription": "CIDR block parameter must be in the form x.x.x.x/16-28",
@@ -221,51 +148,93 @@
             "Description": "CIDR block for the VPC",
             "Type": "String"
         },
-        "WorkloadInstanceType": {
-            "AllowedValues": [
-                "t2.large",
-                "m4.large",
-                "m4.xlarge",
-                "m4.2xlarge",
-                "m4.4xlarge",
-                "m4.10xlarge",
-                "m3.medium",
-                "m3.large",
-                "m3.xlarge",
-                "m3.2xlarge",
-                "c4.large",
-                "c4.xlarge",
-                "c4.2xlarge",
-                "c4.4xlarge",
-                "c4.8xlarge",
-                "c3.large",
-                "c3.xlarge",
-                "c3.2xlarge",
-                "c3.4xlarge",
-                "c3.8xlarge",
-                "r3.large",
-                "r3.xlarge"
-            ],
-            "ConstraintDescription": "Must contain valid instance type",
-            "Default": "m4.xlarge",
-            "Description": "EC2 instance type for the Workload instances",
-            "Type": "String"
-        },
-        "WorkloadNodesDesiredCapacity": {
-            "Default": "2",
-            "Description": "The desired capacity for the Workload nodes Auto Scaling group",
-            "Type": "String"
-        },
-        "WorkloadNodesMaxSize": {
-            "Default": "4",
-            "Description": "The maximum size of the Auto Scaling group",
-            "Type": "String"
-        },
-        "WorkloadNodesMinSize": {
-            "Default": "2",
-            "Description": "The minimum size of the Auto Scaling group",
-            "Type": "String"
-        }
+		"KeyPairName": {
+		  "Description": "Name of an existing EC2 key pair. All instances will launch with this key pair.",
+		  "Type": "AWS::EC2::KeyPair::KeyName"
+		},
+		"StorageVolumeSize": {
+		  "Description": "Capacity of the volume used to store update files. (GB)",
+		  "Default": "500",
+		  "Type": "Number"
+		},
+		"QSS3BucketName": {
+		  "AllowedPattern": "^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$",
+		  "ConstraintDescription": "Quick Start bucket name can include numbers, lowercase letters, uppercase letters, and hyphens (-). It cannot start or end with a hyphen (-).",
+		  "Default": "aws-quickstart",
+		  "Description": "S3 bucket name for the Quick Start assets. This string can include numbers, lowercase letters, uppercase letters, and hyphens (-). It cannot start or end with a hyphen (-).",
+		  "Type": "String"
+		},
+		"QSS3KeyPrefix": {
+		  "AllowedPattern": "^[0-9a-zA-Z-/]*$",
+		  "ConstraintDescription": "Quick Start key prefix can include numbers, lowercase letters, uppercase letters, hyphens (-), and forward slash (/).",
+		  "Default": "quickstart-microsoft-wsus/",
+		  "Description": "S3 key prefix for the Quick Start assets. Quick Start key prefix can include numbers, lowercase letters, uppercase letters, hyphens (-), and forward slash (/).",
+		  "Type": "String"
+		},
+		"WSUSServerNetBIOSName": {
+		  "AllowedPattern": "[a-zA-Z0-9\\-]+",
+		  "Default": "WSUS",
+		  "Description": "NetBIOS name of the WSUS server (up to 15 characters)",
+		  "MaxLength": "15",
+		  "MinLength": "1",
+		  "Type": "String"
+		},
+		"WSUSLanguagesList": {
+		  "Default": "en",
+		  "Description": "Configure WSUS enabled languages with a comma delimited list of languages",
+		  "Type": "String"
+		},
+		"WSUSProductList": {
+		  "Default": "SQL Server 2012 R2, SQL Server 2016, SQL Server 2017, Windows Server 2012 R2, Windows Server 2016, Windows Server 2019",
+		  "Description": "Configure the Platforms that you want WSUS to receive updates",
+		  "Type": "String"
+		},
+		"WSUSClassification": {
+		  "Default": "Applications, Update Rollups, Security Updates, Critical Updates, Service Packs, Updates, Drivers, Driver Sets",
+		  "Description": "Configure WSUS classifications",
+		  "Type": "String"
+		},
+		"WSUSNumOfSyncsPerDay": {
+		  "Default": "1",
+		  "Description": "Configure number of WSUS synchronizations per day",
+		  "Type": "Number"
+		},
+		"WindowsVersion": {
+		  "AllowedValues": [
+			"Windows2019Full",
+			"Windows2019Core",
+			"Windows2019Full_MSSQL2017Standard"
+		  ],
+		  "ConstraintDescription": "Must be one of supported Windows versions",
+		  "Default": "Windows2019Core",
+		  "Description": "Select Windows version to run WSUS. Windows Core is recommended for production environments.",
+		  "Type": "String"
+		},
+		"WorkloadInstanceType": {
+		  "AllowedValues": [
+			"t3a.2xlarge",
+			"t3.2xlarge",
+			"r5a.xlarge",
+			"r5a.2xlarge",
+			"r5a.4xlarge",
+			"r5a.8xlarge",
+			"r5.large",
+			"r5.xlarge",
+			"r5.2xlarge",
+			"r5.4xlarge",
+			"r5.8xlarge",
+			"r4.xlarge",
+			"r4.2xlarge",
+			"r4.4xlarge",
+			"r4.8xlarge",
+			"z1d.large",
+			"z1d.xlarge"
+		  ],
+		  "ConstraintDescription": "Must contain valid instance type",
+		  "Default": "r5.2xlarge",
+		  "Description": "Type of EC2 instance for the Workload instances",
+		  "Type": "String"
+		}
     },
     "Resources": {
         "VPCStack": {
@@ -305,107 +274,52 @@
                 }
             }
         },
-        "BastionStack": {
+        "WorkloadStack": {
             "DependsOn": "VPCStack",
             "Type": "AWS::CloudFormation::Stack",
             "Properties": {
                 "TemplateURL": {
-                    "Fn::Sub": "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}submodules/quickstart-linux-bastion/templates/linux-bastion.template"
+                    "Fn::Sub": "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}templates/wsus.template"
                 },
-                "Parameters": {
-                    "BastionAMIOS": {
-                        "Ref": "BastionAMIOS"
-                    },
-                    "BastionInstanceType": {
-                        "Ref": "BastionInstanceType"
-                    },
+                "Parameters": {                    
                     "KeyPairName": {
                         "Ref": "KeyPairName"
                     },
-                    "PublicSubnet1ID": {
-                        "Fn::GetAtt": [
-                            "VPCStack",
-                            "Outputs.PublicSubnet1ID"
-                        ]
+					"StorageVolumeSize": {
+						"Ref": "StorageVolumeSize"
+					},
+                    "WSUSServerNetBIOSName": {
+                        "Ref": "WSUSServerNetBIOSName"
                     },
-                    "PublicSubnet2ID": {
-                        "Fn::GetAtt": [
-                            "VPCStack",
-                            "Outputs.PublicSubnet2ID"
-                        ]
+					"DomainJoin": "No. Please keep WSUS as a standalone Windows instance.",
+                    "DomainAdminPassword": "",
+					"DomainAdminUser": "StackAdmin",
+					"DomainDNSName": "example.com",
+					"DomainMemberSGID": "",
+					"DomainNetBIOSName": "EXAMPLE",
+					"WSUSLanguagesList": {
+                        "Ref": "WSUSLanguagesList"
                     },
-                    "QSS3BucketName": {
-                        "Ref": "QSS3BucketName"
+					"WSUSProductList": {
+                        "Ref": "WSUSProductList"
                     },
-                    "QSS3KeyPrefix": {
-                        "Fn::Sub": "${QSS3KeyPrefix}submodules/quickstart-linux-bastion/"
+					"WSUSClassification": {
+                        "Ref": "WSUSClassification"
                     },
-                    "RemoteAccessCIDR": {
-                        "Ref": "RemoteAccessCIDR"
+					"WSUSNumOfSyncsPerDay": {
+                        "Ref": "WSUSNumOfSyncsPerDay"
                     },
-                    "VPCID": {
-                        "Fn::GetAtt": [
-                            "VPCStack",
-                            "Outputs.VPCID"
-                        ]
-                    }
-                }
-            }
-        },
-        "WorkloadStack": {
-            "DependsOn": "BastionStack",
-            "Type": "AWS::CloudFormation::Stack",
-            "Properties": {
-                "TemplateURL": {
-                    "Fn::Sub": "https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}templates/workload-json.template"
-                },
-                "Parameters": {
-                    "WorkloadInstanceType": {
+					"WindowsVersion": {
+                        "Ref": "WindowsVersion"
+                    },
+					"WorkloadInstanceType": {
                         "Ref": "WorkloadInstanceType"
                     },
-                    "WorkloadNodesDesiredCapacity": {
-                        "Ref": "WorkloadNodesDesiredCapacity"
-                    },
-                    "WorkloadNodesMaxSize": {
-                        "Ref": "WorkloadNodesMaxSize"
-                    },
-                    "WorkloadNodesMinSize": {
-                        "Ref": "WorkloadNodesMinSize"
-                    },
-                    "BastionSecurityGroupID": {
-                        "Fn::GetAtt": [
-                            "BastionStack",
-                            "Outputs.BastionSecurityGroupID"
-                        ]
-                    },
-                    "KeyPairName": {
-                        "Ref": "KeyPairName"
-                    },
-                    "OperatorEmail": {
-                        "Ref": "OperatorEmail"
-                    },
+					
                     "PrivateSubnet1ID": {
                         "Fn::GetAtt": [
                             "VPCStack",
                             "Outputs.PrivateSubnet1AID"
-                        ]
-                    },
-                    "PrivateSubnet2ID": {
-                        "Fn::GetAtt": [
-                            "VPCStack",
-                            "Outputs.PrivateSubnet2AID"
-                        ]
-                    },
-                    "PublicSubnet1ID": {
-                        "Fn::GetAtt": [
-                            "VPCStack",
-                            "Outputs.PublicSubnet1ID"
-                        ]
-                    },
-                    "PublicSubnet2ID": {
-                        "Fn::GetAtt": [
-                            "VPCStack",
-                            "Outputs.PublicSubnet2ID"
                         ]
                     },
                     "QSS3BucketName": {
@@ -413,9 +327,6 @@
                     },
                     "QSS3KeyPrefix": {
                         "Ref": "QSS3KeyPrefix"
-                    },
-                    "S3BucketName": {
-                        "Ref": "S3BucketName"
                     },
                     "VPCID": {
                         "Fn::GetAtt": [

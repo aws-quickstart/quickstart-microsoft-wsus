@@ -35,9 +35,7 @@ Metadata:
         Parameters:
           - WSUSInstanceType
           - LatestAmiId
-          - WSFCNode1NetBIOSName
-          - WSFCNode2NetBIOSName
-          - ELBConfiguration
+          - WSUS1NetBIOSName
       - Label:
           default: AWS Quick Start Configuration
         Parameters:
@@ -84,12 +82,8 @@ Metadata:
         default: VPC ID
       VPCCIDR:
         default: VPC CIDR
-      WSFCNode1NetBIOSName:
-        default: WSFC1
-      WSFCNode2NetBIOSName:
-        default: WSFC2
-      ELBConfiguration:
-        default: ELB Configuration
+      WSUS1NetBIOSName:
+        default: WSUS Node NetBIOS Name
 Parameters:
   ADServer1NetBIOSName:
     AllowedPattern: '[a-zA-Z0-9\-]+'
@@ -206,35 +200,17 @@ Parameters:
     Default: 10.0.0.0/16
     Description: CIDR Block used by the VPC
     Type: String
-  WSFCNode1NetBIOSName:
+  WSUS1NetBIOSName:
     AllowedPattern: '[a-zA-Z0-9\-]+'
-    Default: WSFC1
-    Description: NetBIOS name of the existing SQL WSFC server in AZ1
+    Default: WSUS1
+    Description: NetBIOS name of the existing Domain Controller in AZ1
     MaxLength: '15'
     MinLength: '1'
-    Type: String
-  WSFCNode2NetBIOSName:
-    AllowedPattern: '[a-zA-Z0-9\-]+'
-    Default: WSFC2
-    Description: NetBIOS name of the existing SQL WSFC server in AZ2
-    MaxLength: '15'
-    MinLength: '1'
-    Type: String
-  ELBConfiguration:
-    AllowedValues:
-      - internal
-      - external
-    Default: internal
-    Description: Specify how to configure the Elastic Load Balancer. Allowed values
-      are internal or external
     Type: String
 Conditions:
   GovCloudCondition: !Equals
     - !Ref 'AWS::Region'
     - us-gov-west-1
-  ELBConfigCondition: !Equals
-    - !Ref 'ELBConfiguration'
-    - internal
 Resources:
   WSUS1WaitCondition:
     Type: AWS::CloudFormation::WaitCondition
@@ -243,14 +219,6 @@ Resources:
       Handle: !Ref 'WSUS1WaitHandle'
       Timeout: '1800'
   WSUS1WaitHandle:
-    Type: AWS::CloudFormation::WaitConditionHandle
-  WSUS2WaitCondition:
-    Type: AWS::CloudFormation::WaitCondition
-    DependsOn: WSUS2
-    Properties:
-      Handle: !Ref 'WSUS2WaitHandle'
-      Timeout: '1800'
-  WSUS2WaitHandle:
     Type: AWS::CloudFormation::WaitConditionHandle
   WSUS1:
     Type: AWS::EC2::Instance
@@ -333,6 +301,14 @@ Resources:
                     - s3-us-gov-west-1
                     - s3
               authentication: S3AccessCreds
+            C:\cfn\scripts\Rename-Computer.ps1:
+              source: !Sub
+                - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}submodules/quickstart-microsoft-utilities/scripts/Rename-Computer.ps1
+                - QSS3Region: !If
+                    - GovCloudCondition
+                    - s3-us-gov-west-1
+                    - s3
+              authentication: S3AccessCreds
             C:\cfn\scripts\Unzip-Archive.ps1:
               source: !Sub
                 - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}submodules/quickstart-microsoft-utilities/scripts/Unzip-Archive.ps1
@@ -341,9 +317,9 @@ Resources:
                     - s3-us-gov-west-1
                     - s3
               authentication: S3AccessCreds
-            C:\cfn\scripts\Configure-Node1.ps1:
+            C:\cfn\scripts\Configure-Single.ps1:
               source: !Sub
-                - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/Configure-Node1.ps1
+                - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/Configure-Single.ps1
                 - QSS3Region: !If
                     - GovCloudCondition
                     - s3-us-gov-west-1
@@ -352,11 +328,7 @@ Resources:
             C:\cfn\scripts\InstallWSUS1.bat:
               content: !Join
                 - ''
-                - - powershell.exe -Command "C:\cfn\scripts\Configure-Node1.ps1 -SQLServer
-                    '
-                  - !Ref 'WSFCNode1NetBIOSName'
-                  - ''''
-                  - "\"\n"
+                - - powershell.exe -Command "C:\cfn\scripts\Configure-Single.ps1"
           commands:
             a-set-execution-policy:
               command: powershell.exe -Command "Set-ExecutionPolicy RemoteSigned -Force"
@@ -378,7 +350,10 @@ Resources:
             1-execute-powershell-script-rename-computer:
               command: !Join
                 - ''
-                - - powershell.exe -Command "Rename-Computer -NewName 'WSUS1' -Restart"
+                - - powershell.exe -Command "C:\cfn\scripts\Rename-Computer.ps1 -Restart
+                    -NewName '
+                  - !Ref WSUS1NetBIOSName
+                  - '''"'
               waitAfterCompletion: forever
         join:
           commands:
@@ -440,7 +415,7 @@ Resources:
       SubnetId: !Ref 'PrivateSubnet1ID'
       Tags:
         - Key: Name
-          Value: WSUS1
+          Value: !Ref WSUS1NetBIOSName
       BlockDeviceMappings:
         - DeviceName: /dev/sda1
           Ebs:
@@ -462,277 +437,6 @@ Resources:
             - !Ref 'AWS::Region'
             - "\n"
             - "</script>\n"
-  WSUS2:
-    Type: AWS::EC2::Instance
-    DependsOn: WSUS1WaitCondition
-    Metadata:
-      AWS::CloudFormation::Authentication:
-        S3AccessCreds:
-          type: S3
-          roleName: !Ref 'WSUSRole'
-          buckets:
-            - !Ref 'QSS3BucketName'
-      AWS::CloudFormation::Init:
-        configSets:
-          config:
-            - setup
-            - rename
-            - join
-            - installWSUS2
-            - finalize
-        setup:
-          files:
-            C:\cfn\cfn-hup.conf:
-              content: !Join
-                - ''
-                - - "[main]\n"
-                  - stack=
-                  - !Ref 'AWS::StackName'
-                  - "\n"
-                  - region=
-                  - !Ref 'AWS::Region'
-                  - "\n"
-            C:\cfn\hooks.d\cfn-auto-reloader.conf:
-              content: !Join
-                - ''
-                - - "[cfn-auto-reloader-hook]\n"
-                  - "triggers=post.update\n"
-                  - "path=Resources.WSUS.Metadata.AWS::CloudFormation::Init\n"
-                  - 'action=cfn-init.exe -v -c config -s '
-                  - !Ref 'AWS::StackId'
-                  - ' -r WSUS2'
-                  - ' --region '
-                  - !Ref 'AWS::Region'
-                  - "\n"
-            C:\cfn\modules\AWSQuickStart.zip:
-              source: !Sub
-                - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}submodules/quickstart-microsoft-utilities/modules/AWSQuickStart.zip
-                - QSS3Region: !If
-                    - GovCloudCondition
-                    - s3-us-gov-west-1
-                    - s3
-              authentication: S3AccessCreds
-            C:\cfn\scripts\Disable-AutoLogon.ps1:
-              source: !Sub
-                - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}submodules/quickstart-microsoft-utilities/scripts/Disable-AutoLogon.ps1
-                - QSS3Region: !If
-                    - GovCloudCondition
-                    - s3-us-gov-west-1
-                    - s3
-              authentication: S3AccessCreds
-            C:\cfn\scripts\Enable-AutoLogon.ps1:
-              source: !Sub
-                - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}submodules/quickstart-microsoft-utilities/scripts/Enable-AutoLogon.ps1
-                - QSS3Region: !If
-                    - GovCloudCondition
-                    - s3-us-gov-west-1
-                    - s3
-              authentication: S3AccessCreds
-            C:\cfn\scripts\Download-File.ps1:
-              source: !Sub
-                - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}submodules/quickstart-microsoft-utilities/scripts/Download-File.ps1
-                - QSS3Region: !If
-                    - GovCloudCondition
-                    - s3-us-gov-west-1
-                    - s3
-              authentication: S3AccessCreds
-            C:\cfn\scripts\Join-Domain.ps1:
-              source: !Sub
-                - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}submodules/quickstart-microsoft-utilities/scripts/Join-Domain.ps1
-                - QSS3Region: !If
-                    - GovCloudCondition
-                    - s3-us-gov-west-1
-                    - s3
-              authentication: S3AccessCreds
-            C:\cfn\scripts\Unzip-Archive.ps1:
-              source: !Sub
-                - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}submodules/quickstart-microsoft-utilities/scripts/Unzip-Archive.ps1
-                - QSS3Region: !If
-                    - GovCloudCondition
-                    - s3-us-gov-west-1
-                    - s3
-              authentication: S3AccessCreds
-            C:\cfn\scripts\Configure-Node2.ps1:
-              source: !Sub
-                - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/Configure-Node2.ps1
-                - QSS3Region: !If
-                    - GovCloudCondition
-                    - s3-us-gov-west-1
-                    - s3
-              authentication: S3AccessCreds
-            C:\cfn\scripts\InstallWSUS2.bat:
-              content: !Join
-                - ''
-                - - powershell.exe -Command "C:\cfn\scripts\Configure-Node2.ps1 -SQLServer
-                    '
-                  - !Ref 'WSFCNode1NetBIOSName'
-                  - ''' -Node1 ''WSUS1'''
-                  - "\"\n"
-          commands:
-            a-set-execution-policy:
-              command: powershell.exe -Command "Set-ExecutionPolicy RemoteSigned -Force"
-              waitAfterCompletion: '0'
-            b-unpack-quickstart-module:
-              command: powershell.exe -Command C:\cfn\scripts\Unzip-Archive.ps1 -Source
-                C:\cfn\modules\AWSQuickStart.zip -Destination C:\Windows\system32\WindowsPowerShell\v1.0\Modules\
-              waitAfterCompletion: '0'
-            c-init-quickstart-module:
-              command: !Join
-                - ''
-                - - powershell.exe -Command "
-                  - New-AWSQuickStartWaitHandle -Handle '
-                  - !Ref 'WSUS2WaitHandle'
-                  - '''"'
-              waitAfterCompletion: '0'
-        rename:
-          commands:
-            1-execute-powershell-script-rename-computer:
-              command: !Join
-                - ''
-                - - powershell.exe -Command "Rename-Computer -NewName 'WSUS2' -Restart"
-              waitAfterCompletion: forever
-        join:
-          commands:
-            a-set-dns-servers:
-              command: !Join
-                - ''
-                - - powershell.exe -Command "
-                  - 'Get-NetAdapter | Set-DnsClientServerAddress -ServerAddresses '
-                  - !Ref 'ADServer1PrivateIP'
-                  - ','
-                  - !Ref 'ADServer2PrivateIP'
-                  - '"'
-              waitAfterCompletion: '30'
-            b-join-domain:
-              command: !Join
-                - ''
-                - - powershell.exe -Command "C:\cfn\scripts\Join-Domain.ps1 -DomainName
-                    '
-                  - !Ref 'DomainDNSName'
-                  - ''' -UserName '''
-                  - !Ref 'DomainNetBIOSName'
-                  - \
-                  - !Ref 'DomainAdminUser'
-                  - ''' -Password '''
-                  - !Ref 'DomainAdminPassword'
-                  - '''"'
-              waitAfterCompletion: forever
-        installWSUS2:
-          commands:
-            a-enable-autologon-and-set-startup-script:
-              command: !Join
-                - ''
-                - - powershell.exe -Command "C:\cfn\scripts\Enable-AutoLogon.ps1
-                  - ' -UserName '''
-                  - !Ref 'DomainAdminUser'
-                  - '@'
-                  - !Ref 'DomainDNSName'
-                  - ''' -Password '''
-                  - !Ref 'DomainAdminPassword'
-                  - ''' -StartupScript ''C:\cfn\scripts\InstallWSUS2.bat'''
-                  - '"'
-              waitAfterCompletion: '0'
-            b-reboot:
-              command: !Join
-                - ''
-                - - powershell.exe -Command Restart-Computer -Force
-              waitAfterCompletion: forever
-        finalize:
-          commands:
-            a-disable-autologon:
-              command: powershell.exe -Command "C:\cfn\scripts\Disable-AutoLogon.ps1"
-              waitAfterCompletion: '0'
-            c-signal-success:
-              command: powershell.exe -Command "Write-AWSQuickStartStatus"
-              waitAfterCompletion: '0'
-    Properties:
-      ImageId: !Ref 'LatestAmiId'
-      InstanceType: !Ref 'WSUSInstanceType'
-      SubnetId: !Ref 'PrivateSubnet1ID'
-      Tags:
-        - Key: Name
-          Value: WSUS2
-      BlockDeviceMappings:
-        - DeviceName: /dev/sda1
-          Ebs:
-            VolumeSize: '120'
-            VolumeType: gp2
-      IamInstanceProfile: !Ref 'WSUSInstanceProfile'
-      SecurityGroupIds:
-        - !Ref 'WSUSSG'
-        - !Ref 'DomainMemberSGID'
-      KeyName: !Ref 'KeyPairName'
-      UserData: !Base64
-        Fn::Join:
-          - ''
-          - - "<script>\n"
-            - 'cfn-init.exe -v -c config -s '
-            - !Ref 'AWS::StackId'
-            - ' -r WSUS2'
-            - ' --region '
-            - !Ref 'AWS::Region'
-            - "\n"
-            - "</script>\n"
-  WSUSELB:
-    Type: AWS::ElasticLoadBalancing::LoadBalancer
-    DependsOn: WSUS2WaitCondition
-    Properties:
-      Subnets: !If
-        - ELBConfigCondition
-        - - !Ref 'PrivateSubnet1ID'
-          - !Ref 'PrivateSubnet2ID'
-        - - !Ref 'PublicSubnet1ID'
-          - !Ref 'PublicSubnet2ID'
-      Scheme: !If
-        - ELBConfigCondition
-        - internal
-        - internet-facing
-      Instances:
-        - !Ref 'WSUS1'
-        - !Ref 'WSUS2'
-      Listeners:
-        - LoadBalancerPort: '80'
-          InstancePort: '80'
-          Protocol: TCP
-        - LoadBalancerPort: '443'
-          InstancePort: '443'
-          Protocol: TCP
-        - LoadBalancerPort: '8530'
-          InstancePort: '8530'
-          Protocol: TCP
-        - LoadBalancerPort: '8531'
-          InstancePort: '8531'
-          Protocol: TCP
-      SecurityGroups:
-        - !Ref 'WSUSELBSG'
-      HealthCheck:
-        Target: TCP:8530
-        HealthyThreshold: '3'
-        UnhealthyThreshold: '5'
-        Interval: '10'
-        Timeout: '5'
-  WSUSELBSG:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupDescription: Security Group for SharePoint ELB
-      VpcId: !Ref 'VPCID'
-      SecurityGroupIngress:
-        - IpProtocol: tcp
-          FromPort: '80'
-          ToPort: '80'
-          CidrIp: '0.0.0.0/0'
-        - IpProtocol: tcp
-          FromPort: '443'
-          ToPort: '443'
-          CidrIp: '0.0.0.0/0'
-        - IpProtocol: tcp
-          FromPort: '8530'
-          ToPort: '8530'
-          CidrIp: '0.0.0.0/0'
-        - IpProtocol: tcp
-          FromPort: '8531'
-          ToPort: '8531'
-          CidrIp: '0.0.0.0/0'
   WSUSSG:
     Type: AWS::EC2::SecurityGroup
     Properties:

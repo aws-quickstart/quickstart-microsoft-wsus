@@ -19,7 +19,7 @@ global:
 tests:
   quickstart-microsoft-wsust1:
     parameter_input: quickstart-microsoft-wsus-params2.json
-    template_file: wsus-master.template
+    template_file: quickstart-microsoft-wsus-master.yaml
     regions:
 #    - ap-northeast-1
 #    - ap-northeast-2
