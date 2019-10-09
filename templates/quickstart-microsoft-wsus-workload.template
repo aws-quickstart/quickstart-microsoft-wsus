@@ -865,4 +865,4 @@ Resources:
 Outputs:
   InstanceIP:
     Description: "Private IP of WSUS Instance"
-    Valu
+    Value: !GetAtt WSUSInstance.PrivateIp

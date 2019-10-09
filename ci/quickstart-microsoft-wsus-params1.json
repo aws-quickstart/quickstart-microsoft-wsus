@@ -1,7 +1,7 @@
 [    
     {
         "ParameterKey": "AvailabilityZones",
-        "ParameterValue": "$[taskcat_getaz_1]",
+        "ParameterValue": "$[taskcat_getaz_2]",
         "UsePreviousValue": false
     },
     {
