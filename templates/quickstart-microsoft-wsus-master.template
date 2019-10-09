@@ -148,93 +148,93 @@
             "Description": "CIDR block for the VPC",
             "Type": "String"
         },
-		"KeyPairName": {
-		  "Description": "Name of an existing EC2 key pair. All instances will launch with this key pair.",
-		  "Type": "AWS::EC2::KeyPair::KeyName"
-		},
-		"StorageVolumeSize": {
-		  "Description": "Capacity of the volume used to store update files. (GB)",
-		  "Default": "500",
-		  "Type": "Number"
-		},
-		"QSS3BucketName": {
-		  "AllowedPattern": "^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$",
-		  "ConstraintDescription": "Quick Start bucket name can include numbers, lowercase letters, uppercase letters, and hyphens (-). It cannot start or end with a hyphen (-).",
-		  "Default": "aws-quickstart",
-		  "Description": "S3 bucket name for the Quick Start assets. This string can include numbers, lowercase letters, uppercase letters, and hyphens (-). It cannot start or end with a hyphen (-).",
-		  "Type": "String"
-		},
-		"QSS3KeyPrefix": {
-		  "AllowedPattern": "^[0-9a-zA-Z-/]*$",
-		  "ConstraintDescription": "Quick Start key prefix can include numbers, lowercase letters, uppercase letters, hyphens (-), and forward slash (/).",
-		  "Default": "quickstart-microsoft-wsus/",
-		  "Description": "S3 key prefix for the Quick Start assets. Quick Start key prefix can include numbers, lowercase letters, uppercase letters, hyphens (-), and forward slash (/).",
-		  "Type": "String"
-		},
-		"WSUSServerNetBIOSName": {
-		  "AllowedPattern": "[a-zA-Z0-9\\-]+",
-		  "Default": "WSUS",
-		  "Description": "NetBIOS name of the WSUS server (up to 15 characters)",
-		  "MaxLength": "15",
-		  "MinLength": "1",
-		  "Type": "String"
-		},
-		"WSUSLanguagesList": {
-		  "Default": "en",
-		  "Description": "Configure WSUS enabled languages with a comma delimited list of languages",
-		  "Type": "String"
-		},
-		"WSUSProductList": {
-		  "Default": "SQL Server 2012 R2, SQL Server 2016, SQL Server 2017, Windows Server 2012 R2, Windows Server 2016, Windows Server 2019",
-		  "Description": "Configure the Platforms that you want WSUS to receive updates",
-		  "Type": "String"
-		},
-		"WSUSClassification": {
-		  "Default": "Applications, Update Rollups, Security Updates, Critical Updates, Service Packs, Updates, Drivers, Driver Sets",
-		  "Description": "Configure WSUS classifications",
-		  "Type": "String"
-		},
-		"WSUSNumOfSyncsPerDay": {
-		  "Default": "1",
-		  "Description": "Configure number of WSUS synchronizations per day",
-		  "Type": "Number"
-		},
-		"WindowsVersion": {
-		  "AllowedValues": [
-			"Windows2019Full",
-			"Windows2019Core",
-			"Windows2019Full_MSSQL2017Standard"
-		  ],
-		  "ConstraintDescription": "Must be one of supported Windows versions",
-		  "Default": "Windows2019Core",
-		  "Description": "Select Windows version to run WSUS. Windows Core is recommended for production environments.",
-		  "Type": "String"
-		},
-		"WorkloadInstanceType": {
-		  "AllowedValues": [
-			"t3a.2xlarge",
-			"t3.2xlarge",
-			"r5a.xlarge",
-			"r5a.2xlarge",
-			"r5a.4xlarge",
-			"r5a.8xlarge",
-			"r5.large",
-			"r5.xlarge",
-			"r5.2xlarge",
-			"r5.4xlarge",
-			"r5.8xlarge",
-			"r4.xlarge",
-			"r4.2xlarge",
-			"r4.4xlarge",
-			"r4.8xlarge",
-			"z1d.large",
-			"z1d.xlarge"
-		  ],
-		  "ConstraintDescription": "Must contain valid instance type",
-		  "Default": "r5.2xlarge",
-		  "Description": "Type of EC2 instance for the Workload instances",
-		  "Type": "String"
-		}
+				"KeyPairName": {
+		  			"Description": "Name of an existing EC2 key pair. All instances will launch with this key pair.",
+		  			"Type": "AWS::EC2::KeyPair::KeyName"
+				},
+				"StorageVolumeSize": {
+		  			"Description": "Capacity of the volume used to store update files. (GB)",
+		  			"Default": "500",
+		  			"Type": "Number"
+				},
+				"QSS3BucketName": {
+		  			"AllowedPattern": "^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$",
+		  			"ConstraintDescription": "Quick Start bucket name can include numbers, lowercase letters, uppercase letters, and hyphens (-). It cannot start or end with a hyphen (-).",
+		  			"Default": "aws-quickstart",
+		  			"Description": "S3 bucket name for the Quick Start assets. This string can include numbers, lowercase letters, uppercase letters, and hyphens (-). It cannot start or end with a hyphen (-).",
+		  			"Type": "String"
+				},
+				"QSS3KeyPrefix": {
+		  			"AllowedPattern": "^[0-9a-zA-Z-/]*$",
+		  			"ConstraintDescription": "Quick Start key prefix can include numbers, lowercase letters, uppercase letters, hyphens (-), and forward slash (/).",
+		  			"Default": "quickstart-microsoft-wsus/",
+		  			"Description": "S3 key prefix for the Quick Start assets. Quick Start key prefix can include numbers, lowercase letters, uppercase letters, hyphens (-), and forward slash (/).",
+		  			"Type": "String"
+				},
+				"WSUSServerNetBIOSName": {
+		  			"AllowedPattern": "[a-zA-Z0-9\\-]+",
+		  			"Default": "WSUS",
+		  			"Description": "NetBIOS name of the WSUS server (up to 15 characters)",
+		  			"MaxLength": "15",
+		  			"MinLength": "1",
+		  			"Type": "String"
+				},
+				"WSUSLanguagesList": {
+		  			"Default": "en",
+		  			"Description": "Configure WSUS enabled languages with a comma delimited list of languages",
+		  			"Type": "String"
+				},
+				"WSUSProductList": {
+		  			"Default": "SQL Server 2012 R2, SQL Server 2016, SQL Server 2017, Windows Server 2012 R2, Windows Server 2016, Windows Server 2019",
+		  			"Description": "Configure the Platforms that you want WSUS to receive updates",
+		  			"Type": "String"
+				},
+				"WSUSClassification": {
+		  			"Default": "Applications, Update Rollups, Security Updates, Critical Updates, Service Packs, Updates, Drivers, Driver Sets",
+		  			"Description": "Configure WSUS classifications",
+		  			"Type": "String"
+				},
+				"WSUSNumOfSyncsPerDay": {
+		  			"Default": "1",
+		  			"Description": "Configure number of WSUS synchronizations per day",
+					  "Type": "Number"
+				},
+				"WindowsVersion": {
+		  			"AllowedValues": [
+							"Windows2019Full",
+							"Windows2019Core",
+							"Windows2019Full_MSSQL2017Standard"
+		  			],
+		  			"ConstraintDescription": "Must be one of supported Windows versions",
+		  			"Default": "Windows2019Core",
+		  			"Description": "Select Windows version to run WSUS. Windows Core is recommended for production environments.",
+		  			"Type": "String"
+				},
+				"WorkloadInstanceType": {
+		  			"AllowedValues": [
+							"t3a.2xlarge",
+							"t3.2xlarge",
+							"r5a.xlarge",
+							"r5a.2xlarge",
+							"r5a.4xlarge",
+							"r5a.8xlarge",
+							"r5.large",
+							"r5.xlarge",
+							"r5.2xlarge",
+							"r5.4xlarge",
+							"r5.8xlarge",
+							"r4.xlarge",
+							"r4.2xlarge",
+							"r4.4xlarge",
+							"r4.8xlarge",
+							"z1d.large",
+							"z1d.xlarge"
+		  			],
+		  			"ConstraintDescription": "Must contain valid instance type",
+		  			"Default": "r5.2xlarge",
+		  			"Description": "Type of EC2 instance for the Workload instances",
+		  			"Type": "String"
+				}
     },
     "Resources": {
         "VPCStack": {
