@@ -1,6 +1,6 @@
 {
     "AWSTemplateFormatVersion": "2010-09-09",
-    "Description": "This master template creates a VPC infrastructure for a multi-AZ, multi-tier deployment of a workload on AWS. It deploys a VPC with bastions and a workload cluster behind an ELB. The cluster is configured to use an S3 bucket for storage  **WARNING** This template creates EC2 instances and related resources. You will be billed for the AWS resources used if you create a stack from this template.",
+    "Description": "This master template creates a VPC infrastructure for a multi-AZ, multi-tier deployment of a workload on AWS. It deploys a VPC and WSUS instance. **WARNING** This template creates EC2 instances and related resources. You will be billed for the AWS resources used if you create a stack from this template.",
     "Metadata": {
         "AWS::CloudFormation::Interface": {
             "ParameterGroups": [
@@ -24,6 +24,7 @@
 				  "Parameters": [
 					"WSUSServerNetBIOSName",
 					"KeyPairName",
+					"StorageVolumeSize",
 					"WindowsVersion",
 					"WorkloadInstanceType"
 				  ]
@@ -79,6 +80,9 @@
                 },
 				"KeyPairName": {
 				  "default": "SSH Key Name"
+				},
+				"StorageVolumeSize": {
+				  "default": "Storage Volume Size"
 				},
 				"WorkloadInstanceType": {
 				  "default": "Workload Servers Instance Type"
@@ -148,6 +152,11 @@
 		  "Description": "Name of an existing EC2 key pair. All instances will launch with this key pair.",
 		  "Type": "AWS::EC2::KeyPair::KeyName"
 		},
+		"StorageVolumeSize": {
+		  "Description": "Capacity of the volume used to store update files. (GB)",
+		  "Default": "500",
+		  "Type": "Number"
+		},
 		"QSS3BucketName": {
 		  "AllowedPattern": "^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$",
 		  "ConstraintDescription": "Quick Start bucket name can include numbers, lowercase letters, uppercase letters, and hyphens (-). It cannot start or end with a hyphen (-).",
@@ -203,31 +212,26 @@
 		},
 		"WorkloadInstanceType": {
 		  "AllowedValues": [
-			"t2.large",
-			"m4.large",
-			"m4.xlarge",
-			"m4.2xlarge",
-			"m4.4xlarge",
-			"m4.10xlarge",
-			"m3.medium",
-			"m3.large",
-			"m3.xlarge",
-			"m3.2xlarge",
-			"c4.large",
-			"c4.xlarge",
-			"c4.2xlarge",
-			"c4.4xlarge",
-			"c4.8xlarge",
-			"c3.large",
-			"c3.xlarge",
-			"c3.2xlarge",
-			"c3.4xlarge",
-			"c3.8xlarge",
-			"r3.large",
-			"r3.xlarge"
+			"t3a.2xlarge",
+			"t3.2xlarge",
+			"r5a.xlarge",
+			"r5a.2xlarge",
+			"r5a.4xlarge",
+			"r5a.8xlarge",
+			"r5.large",
+			"r5.xlarge",
+			"r5.2xlarge",
+			"r5.4xlarge",
+			"r5.8xlarge",
+			"r4.xlarge",
+			"r4.2xlarge",
+			"r4.4xlarge",
+			"r4.8xlarge",
+			"z1d.large",
+			"z1d.xlarge"
 		  ],
 		  "ConstraintDescription": "Must contain valid instance type",
-		  "Default": "m4.xlarge",
+		  "Default": "r5.2xlarge",
 		  "Description": "Type of EC2 instance for the Workload instances",
 		  "Type": "String"
 		}
@@ -281,6 +285,9 @@
                     "KeyPairName": {
                         "Ref": "KeyPairName"
                     },
+					"StorageVolumeSize": {
+						"Ref": "StorageVolumeSize"
+					},
                     "WSUSServerNetBIOSName": {
                         "Ref": "WSUSServerNetBIOSName"
                     },
