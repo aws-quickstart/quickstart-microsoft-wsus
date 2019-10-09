@@ -27,6 +27,7 @@ Metadata:
       - KeyPairName
       - WindowsVersion
       - WorkloadInstanceType
+      - StorageVolumeSize
     - Label:
         default: WSUS Configuration
       Parameters:
@@ -42,6 +43,8 @@ Metadata:
     ParameterLabels:
       KeyPairName:
         default: SSH Key Name
+      StorageVolumeSize:
+        default: Storage Volume Size
       PrivateSubnet1ID:
         default: Private Subnet 1 ID
       QSS3BucketName:
@@ -81,6 +84,10 @@ Parameters:
     Description: Name of an existing EC2 key pair. All instances will launch with
       this key pair.
     Type: AWS::EC2::KeyPair::KeyName
+  StorageVolumeSize:
+    Default: '500'
+    Description: Capacity of the volume used to store update files. (GB)
+    Type: Number
   PrivateSubnet1ID:
     Description: ID of private subnet 1 in Availability Zone 1 for the Workload (e.g.,
       subnet-a0246dcd)
@@ -185,30 +192,25 @@ Parameters:
     Type: String
   WorkloadInstanceType:
     AllowedValues:
-    - t2.large
-    - m4.large
-    - m4.xlarge
-    - m4.2xlarge
-    - m4.4xlarge
-    - m4.10xlarge
-    - m3.medium
-    - m3.large
-    - m3.xlarge
-    - m3.2xlarge
-    - c4.large
-    - c4.xlarge
-    - c4.2xlarge
-    - c4.4xlarge
-    - c4.8xlarge
-    - c3.large
-    - c3.xlarge
-    - c3.2xlarge
-    - c3.4xlarge
-    - c3.8xlarge
-    - r3.large
-    - r3.xlarge
+    - t3a.2xlarge
+    - t3.2xlarge
+    - r5a.xlarge
+    - r5a.2xlarge
+    - r5a.4xlarge
+    - r5a.8xlarge
+    - r5.large
+    - r5.xlarge
+    - r5.2xlarge
+    - r5.4xlarge
+    - r5.8xlarge
+    - r4.xlarge
+    - r4.2xlarge
+    - r4.4xlarge
+    - r4.8xlarge
+    - z1d.large
+    - z1d.xlarge
     ConstraintDescription: Must contain valid instance type
-    Default: m4.xlarge
+    Default: r5.2xlarge
     Description: Type of EC2 instance for the Workload instances
     Type: String
 Conditions:
@@ -711,14 +713,14 @@ Resources:
         - Fn::GetAtt:
           - WinFullBaseAMIInfo
           - Id
-        Fn::If:
-        - WindowsCoreSelected
-        - Fn::GetAtt:
-          - WinCoreBaseAMIInfo
-          - Id
-        - Fn::GetAtt:
-          - WinFullSQL2017StandardAMIInfo
-          - Id
+        - Fn::If:
+          - WindowsCoreSelected
+          - Fn::GetAtt:
+            - WinCoreBaseAMIInfo
+            - Id
+          - Fn::GetAtt:
+            - WinFullSQL2017StandardAMIInfo
+            - Id
       IamInstanceProfile:
         Ref: WSUSProfile
       InstanceType:
@@ -745,7 +747,7 @@ Resources:
           VolumeType: gp2
       - DeviceName: "/dev/sdm"
         Ebs:
-          VolumeSize: '500'
+          VolumeSize: !Sub "${StorageVolumeSize}"
           VolumeType: gp2
       KeyName:
         Ref: KeyPairName
@@ -863,4 +865,4 @@ Resources:
 Outputs:
   InstanceIP:
     Description: "Private IP of WSUS Instance"
-    Value: !GetAtt WSUSInstance.PrivateIp
+    Valu
