@@ -152,8 +152,7 @@ Parameters:
     Type: String
   DomainMemberSGID:
     Description: ID of the Domain Member Security Group (e.g., sg-7f16e910)
-    Type: String
-    #AWS::EC2::SecurityGroup::Id
+    Type: AWS::EC2::SecurityGroup::Id
   DomainNetBIOSName:
     AllowedPattern: "[a-zA-Z0-9\\-]+"
     Default: EXAMPLE
@@ -486,6 +485,14 @@ Resources:
             default: !Sub "${DomainNetBIOSName}"
             description: "NetBIOS name of the domain (up to 15 characters) for users of earlier versions of Windows e.g. EXAMPLE"
             type: "String"
+          DomainAdminUser: 
+            default: !Sub "${DomainAdminUser}"
+            description: "Fully qualified domain name (FQDN) of the forest root domain e.g. example.com"
+            type: "String"
+          DomainAdminPassword: 
+            default: !Sub "${DomainAdminPassword}"
+            description: "Fully qualified domain name (FQDN) of the forest root domain e.g. example.com"
+            type: "String"
           AdminSecrets: 
             default: !Sub "${ADAdminSecrets}"
             description: "Domain admin credentials"
@@ -518,11 +525,32 @@ Resources:
             default: !Sub "${WSUSNumOfSyncsPerDay}"
             description: "Configure number of WSUS synchronizations per day."
             type: "String"
+          WSUSServerNetBIOSName:
+            default: !Sub "${WSUSServerNetBIOSName}"
+            description: "WSUS Server NetBIOS name"
+            type: "String"
           WindowsVersion:
             default: !Sub "${WindowsVersion}"
             description: "The AMI used to deploy WSUS instance."
             type: "String"
         mainSteps:
+        - name: "WSUSInstanceId"
+          action: aws:executeAwsApi
+          onFailure: "step:signalfailure"
+          inputs:
+            Service: ec2
+            Api: DescribeInstances
+            Filters:  
+            - Name: "tag:Name"
+              Values: ["{{WSUSServerNetBIOSName}}"]
+            - Name: "tag:aws:cloudformation:stack-name"
+              Values: ["{{StackName}}"]
+            - Name: "instance-state-name"
+              Values: [ "running" ]
+          outputs:
+          - Name: InstanceId
+            Selector: "$.Reservations[0].Instances[0].InstanceId"
+            Type: "String"
         - name: "InitializeDisk"
           action: "aws:runCommand"
           onFailure: "step:signalfailure"
@@ -549,12 +577,42 @@ Resources:
               CloudWatchLogGroupName: !Ref 'QuickStartLogs'
             Parameters:
               commands: !Sub "Rename-Computer -Restart -NewName '${WSUSServerNetBIOSName}'"
+        - name: "InstallDscModules"
+          action: "aws:runCommand"
+          onFailure: "step:signalfailure"
+          inputs:
+            DocumentName: "AWS-RunRemoteScript"
+            InstanceIds:
+            - "{{WSUSInstanceId}}"
+            CloudWatchOutputConfig:
+              CloudWatchOutputEnabled: "true"
+              CloudWatchLogGroupName: !Ref 'QuickStartLogs'
+            Parameters:
+              sourceType: "S3"
+              sourceInfo: !Sub ['{"path": "https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/install-dsc-modules.ps1"}',
+                  {QSS3Region: !If [GovCloudCondition, s3-us-gov-west-1, s3]}]
+              commandLine: "./install-dsc-modules.ps1"
+        - name: "LCMConfig"
+          action: "aws:runCommand"
+          onFailure: "step:signalfailure"
+          inputs:
+            DocumentName: "AWS-RunRemoteScript"
+            InstanceIds:
+            - "{{WSUSInstanceId}}"
+            CloudWatchOutputConfig:
+              CloudWatchOutputEnabled: "true"
+              CloudWatchLogGroupName: !Ref 'QuickStartLogs'
+            Parameters:
+              sourceType: "S3"
+              sourceInfo: !Sub ['{"path": "https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/LCM-Config.ps1"}',
+                  {QSS3Region: !If [GovCloudCondition, s3-us-gov-west-1, s3]}]
+              commandLine: "./LCM-Config.ps1"
         - name: "BranchDomainJoin"
           action: aws:branch
           inputs:
             Choices:
             - NextStep: DomainJoin
-              Variable: !Ref 'QuickStartLogs'
+              Variable: !Ref 'DomainJoin'
               StartsWith: "Yes"
             Default: "InstallWSUS"
         - name: "DomainJoin"
@@ -571,7 +629,33 @@ Resources:
               sourceType: "S3"
               sourceInfo: !Sub ['{"path": "https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/DomainJoin.ps1"}',
                   {QSS3Region: !If [GovCloudCondition, s3-us-gov-west-1, s3]}]
-              commandLine: "./DomainJoin.ps1 -DomainNetBIOSName '{{DomainNetBIOSName}}' -DomainDNSName '{{DomainDNSName}}' -AdminSecret '{{AdminSecrets}}'"
+              commandLine: "./DomainJoin.ps1 -InstanceName '{{WSUSServerNetBIOSName}}' -DomainNetBIOSName '{{DomainNetBIOSName}}' -DomainDNSName '{{DomainDNSName}}' -AdminSecret '{{AdminSecrets}}'"
+        - name: "DomainConfig"
+          action: aws:runCommand
+          onFailure: "step:signalfailure"
+          inputs:
+            DocumentName: AWS-RunPowerShellScript
+            InstanceIds: 
+              - "{{WSUSInstanceId}}"
+            CloudWatchOutputConfig:
+              CloudWatchOutputEnabled: "true"
+              CloudWatchLogGroupName: !Ref 'QuickStartLogs'
+            Parameters:
+              commands: 
+                - |     
+                   function DscStatusCheck () {
+                       $LCMState = (Get-DscLocalConfigurationManager).LCMState
+                       if ($LCMState -eq 'PendingConfiguration' -Or $LCMState -eq 'PendingReboot') {
+                           'returning 3010, should continue after reboot'
+                           exit 3010
+                       } else {
+                         'Completed'
+                       }
+                   }
+                   
+                   Start-DscConfiguration 'C:\AWSQuickstart\DomainJoin' -Wait -Verbose -Force
+        
+                   DscStatusCheck
         - name: "RestartComputer"
           action: "aws:runCommand"
           onFailure: "step:signalfailure"
@@ -751,7 +835,6 @@ Resources:
           VolumeType: gp2
       KeyName:
         Ref: KeyPairName
-      UserData:
       UserData: !Base64
         Fn::Join:
           - ''
