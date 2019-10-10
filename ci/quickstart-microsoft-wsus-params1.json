@@ -44,6 +44,6 @@
     },
     {
         "ParameterKey": "WorkloadInstanceType",
-        "ParameterValue": "m4.large"
+        "ParameterValue": "r5.2xlarge"
     }	
 ]
