@@ -152,7 +152,8 @@ Parameters:
     Type: String
   DomainMemberSGID:
     Description: ID of the Domain Member Security Group (e.g., sg-7f16e910)
-    Type: AWS::EC2::SecurityGroup::Id
+#    Type: AWS::EC2::SecurityGroup::Id
+    Type: String
   DomainNetBIOSName:
     AllowedPattern: "[a-zA-Z0-9\\-]+"
     Default: EXAMPLE
