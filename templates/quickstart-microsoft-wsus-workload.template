@@ -486,14 +486,6 @@ Resources:
             default: !Sub "${DomainNetBIOSName}"
             description: "NetBIOS name of the domain (up to 15 characters) for users of earlier versions of Windows e.g. EXAMPLE"
             type: "String"
-          DomainAdminUser: 
-            default: !Sub "${DomainAdminUser}"
-            description: "Fully qualified domain name (FQDN) of the forest root domain e.g. example.com"
-            type: "String"
-          DomainAdminPassword: 
-            default: !Sub "${DomainAdminPassword}"
-            description: "Fully qualified domain name (FQDN) of the forest root domain e.g. example.com"
-            type: "String"
           AdminSecrets: 
             default: !Sub "${ADAdminSecrets}"
             description: "Domain admin credentials"
@@ -535,23 +527,6 @@ Resources:
             description: "The AMI used to deploy WSUS instance."
             type: "String"
         mainSteps:
-        - name: "WSUSInstanceId"
-          action: aws:executeAwsApi
-          onFailure: "step:signalfailure"
-          inputs:
-            Service: ec2
-            Api: DescribeInstances
-            Filters:  
-            - Name: "tag:Name"
-              Values: ["{{WSUSServerNetBIOSName}}"]
-            - Name: "tag:aws:cloudformation:stack-name"
-              Values: ["{{StackName}}"]
-            - Name: "instance-state-name"
-              Values: [ "running" ]
-          outputs:
-          - Name: InstanceId
-            Selector: "$.Reservations[0].Instances[0].InstanceId"
-            Type: "String"
         - name: "InitializeDisk"
           action: "aws:runCommand"
           onFailure: "step:signalfailure"
