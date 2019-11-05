@@ -8,5 +8,5 @@
 	branch = master
 [submodule "submodules/quickstart-microsoft-rdgateway"]
 	path = submodules/quickstart-microsoft-rdgateway
-	url = ../../aws-quickstart/quickstart-microsoft-rdgateway.git
+	url = git@github.com:aws-quickstart/quickstart-microsoft-rdgateway.git
     branch = master
