@@ -6,3 +6,11 @@
 	path = submodules/quickstart-microsoft-utilities
 	url = git@github.com:aws-quickstart/quickstart-microsoft-utilities.git
 	branch = master
+[submodule "submodules/quickstart-microsoft-activedirectory"]
+	path = submodules/quickstart-microsoft-activedirectory
+	url = git@github.com:aws-quickstart/quickstart-microsoft-activedirectory
+	branch = master
+[submodule "submodules/quickstart-microsoft-rdgateway"]
+	path = submodules/quickstart-microsoft-rdgateway
+	url = git@github.com:aws-quickstart/quickstart-microsoft-rdgateway
+	branch = master
