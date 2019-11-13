@@ -222,7 +222,7 @@ Parameters:
     Description: Configure WSUS enabled languages with a comma delimited list of languages
     Type: String
   WSUSProductList:
-    Default: SQL Server 2012 R2, SQL Server 2016, SQL Server 2017, Windows Server
+    Default: Microsoft SQL Server 2012 R2, Microsoft SQL Server 2016, Microsoft SQL Server 2017, Windows Server
       2012 R2, Windows Server 2016, Windows Server 2019
     Description: Configure the Platforms that you want WSUS to receive updates
     Type: String

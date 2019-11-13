@@ -9,8 +9,8 @@ global:
     - ap-southeast-1
     - ap-southeast-2
     - eu-central-1
-#   - eu-west-1
-#    - sa-east-1 NAT Gateway not available
+#    - eu-west-1
+#    - sa-east-1
     - us-east-1
     - us-east-2
     - us-west-1
