@@ -1,8 +1,9 @@
 ---
 AWSTemplateFormatVersion: '2010-09-09'
-Description: This workload template deploys a WSUS instance in an existing VPC. **WARNING**
+Description: >-
+  This workload template deploys a WSUS instance in an existing VPC. **WARNING**
   This template creates EC2 instances and related resources. You will be billed for
-  the AWS resources used if you create a stack from this template.
+  the AWS resources used if you create a stack from this template. (qs-1q77ks439)
 Metadata:
   AWS::CloudFormation::Interface:
     ParameterGroups:
