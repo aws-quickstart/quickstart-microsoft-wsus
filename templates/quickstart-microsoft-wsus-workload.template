@@ -41,6 +41,7 @@ Metadata:
         default: AWS Quick Start configuration
       Parameters:
       - QSS3BucketName
+      - QSS3BucketRegion
       - QSS3KeyPrefix
     ParameterLabels:
       KeyPairName:
@@ -51,6 +52,8 @@ Metadata:
         default: Private subnet 1 ID
       QSS3BucketName:
         default: Quick Start S3 bucket name
+      QSS3BucketRegion:
+        default: Quick Start S3 bucket region
       QSS3KeyPrefix:
         default: Quick Start S3 key prefix
       VPCID:
@@ -105,6 +108,10 @@ Parameters:
     Description: S3 bucket name for the Quick Start assets. This string can include
       numbers, lowercase letters, uppercase letters, and hyphens (-). It cannot start
       or end with a hyphen (-).
+    Type: String
+  QSS3BucketRegion:
+    Default: 'us-east-1'
+    Description: "The AWS Region where the Quick Start S3 bucket (QSS3BucketName) is hosted. When using your own bucket, you must specify this value."
     Type: String
   QSS3KeyPrefix:
     AllowedPattern: "^[0-9a-zA-Z-/]*$"
@@ -243,6 +250,7 @@ Conditions:
     Fn::Equals:
     - Ref: DomainJoin
     - "Yes. Please join WSUS instance to my Active Directory domain."
+  UsingDefaultBucket: !Equals [!Ref QSS3BucketName, 'aws-quickstart']
 Rules:
   KeyPairsNotEmpty:
     Assertions:
@@ -407,7 +415,7 @@ Resources:
         - AMIInfoFunctionLambdaExecutionRole
         - Arn
       Runtime: nodejs10.x
-      Timeout: '30'
+      Timeout: 30
   AMIInfoFunctionLambdaExecutionRole:
     Type: AWS::IAM::Role
     Properties:
@@ -446,9 +454,7 @@ Resources:
               - Action:
                   - s3:GetObject
                   - s3:ListBucket
-                Resource: 
-                  - !Sub 'arn:${AWS::Partition}:s3:::${QSS3BucketName}/${QSS3KeyPrefix}*'
-                  - !Sub 'arn:${AWS::Partition}:s3:::${QSS3BucketName}'
+                Resource: "*"
                 Effect: Allow
           PolicyName: aws-quick-start-s3-policy
         - PolicyDocument:
@@ -510,6 +516,22 @@ Resources:
           AutomationAssumeRole:
             default: ""
             description: "(Optional) The ARN of the role that allows Automation to perform the actions on your behalf."
+            type: "String"
+          QSS3BucketName:
+            default: "aws-quickstart"
+            description: "S3 bucket name for the Quick Start assets. Quick Start bucket name can include numbers, lowercase letters, uppercase letters, and hyphens (-). It cannot start or end with a hyphen (-)."
+            type: "String"
+          QSS3BucketRegion:
+            default: "us-east-1"
+            description: "The AWS Region where the Quick Start S3 bucket (QSS3BucketName) is hosted. When using your own bucket, you must specify this value."
+            type: "String"
+          QSS3KeyPrefix:
+            default: "quickstart-microsoft-activedirectory/"
+            description: "S3 key prefix for the Quick Start assets. Quick Start key prefix can include numbers, lowercase letters, uppercase letters, hyphens (-), and forward slash (/)."
+            type: "String"
+          URLSuffix:
+            default: "amazonaws.com"
+            description: "AWS URL suffix"
             type: "String"
           WSUSLanguagesList:
             default: !Sub "${WSUSLanguagesList}"
@@ -574,8 +596,17 @@ Resources:
               CloudWatchLogGroupName: !Ref 'QuickStartLogs'
             Parameters:
               sourceType: "S3"
-              sourceInfo: !Sub ['{"path": "https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/install-dsc-modules.ps1"}',
-                  {QSS3Region: !If [GovCloudCondition, s3-us-gov-west-1, s3]}]
+              sourceInfo: 
+                !Sub 
+                  - '{"path": "https://${S3Bucket}.s3.${S3Region}.{{URLSuffix}}/{{QSS3KeyPrefix}}scripts/install-dsc-modules.ps1"}'
+                  - S3Bucket: !If
+                      - UsingDefaultBucket
+                      - !Sub '${QSS3BucketName}-${AWS::Region}'
+                      - !Ref QSS3BucketName
+                    S3Region: !If 
+                      - UsingDefaultBucket
+                      - !Ref AWS::Region
+                      - !Ref QSS3BucketRegion
               commandLine: "./install-dsc-modules.ps1"
         - name: "LCMConfig"
           action: "aws:runCommand"
@@ -589,8 +620,17 @@ Resources:
               CloudWatchLogGroupName: !Ref 'QuickStartLogs'
             Parameters:
               sourceType: "S3"
-              sourceInfo: !Sub ['{"path": "https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/LCM-Config.ps1"}',
-                  {QSS3Region: !If [GovCloudCondition, s3-us-gov-west-1, s3]}]
+              sourceInfo: 
+                !Sub 
+                  - '{"path": "https://${S3Bucket}.s3.${S3Region}.{{URLSuffix}}/{{QSS3KeyPrefix}}scripts/LCM-Config.ps1"}'
+                  - S3Bucket: !If
+                      - UsingDefaultBucket
+                      - !Sub '${QSS3BucketName}-${AWS::Region}'
+                      - !Ref QSS3BucketName
+                    S3Region: !If 
+                      - UsingDefaultBucket
+                      - !Ref AWS::Region
+                      - !Ref QSS3BucketRegion
               commandLine: "./LCM-Config.ps1"
         - name: "BranchDomainJoin"
           action: aws:branch
@@ -612,8 +652,17 @@ Resources:
               CloudWatchLogGroupName: !Ref 'QuickStartLogs'
             Parameters:
               sourceType: "S3"
-              sourceInfo: !Sub ['{"path": "https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/DomainJoin.ps1"}',
-                  {QSS3Region: !If [GovCloudCondition, s3-us-gov-west-1, s3]}]
+              sourceInfo: 
+                !Sub 
+                  - '{"path": "https://${S3Bucket}.s3.${S3Region}.{{URLSuffix}}/{{QSS3KeyPrefix}}scripts/DomainJoin.ps1"}'
+                  - S3Bucket: !If
+                      - UsingDefaultBucket
+                      - !Sub '${QSS3BucketName}-${AWS::Region}'
+                      - !Ref QSS3BucketName
+                    S3Region: !If 
+                      - UsingDefaultBucket
+                      - !Ref AWS::Region
+                      - !Ref QSS3BucketRegion
               commandLine: "./DomainJoin.ps1 -InstanceName '{{WSUSServerNetBIOSName}}' -DomainNetBIOSName '{{DomainNetBIOSName}}' -DomainDNSName '{{DomainDNSName}}' -AdminSecret '{{AdminSecrets}}'"
         - name: "DomainConfig"
           action: aws:runCommand
@@ -679,8 +728,17 @@ Resources:
               CloudWatchLogGroupName: !Ref 'QuickStartLogs'
             Parameters:
               sourceType: "S3"
-              sourceInfo: !Sub ['{"path": "https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/configure-wsus.ps1"}',
-                  {QSS3Region: !If [GovCloudCondition, s3-us-gov-west-1, s3]}]
+              sourceInfo: 
+                !Sub 
+                  - '{"path": "https://${S3Bucket}.s3.${S3Region}.{{URLSuffix}}/{{QSS3KeyPrefix}}scripts/configure-wsus.ps1"}'
+                  - S3Bucket: !If
+                      - UsingDefaultBucket
+                      - !Sub '${QSS3BucketName}-${AWS::Region}'
+                      - !Ref QSS3BucketName
+                    S3Region: !If 
+                      - UsingDefaultBucket
+                      - !Ref AWS::Region
+                      - !Ref QSS3BucketRegion
               commandLine: "./configure-wsus.ps1 -langs '{{WSUSLanguagesList}}' -products '{{WSUSProductList}}' -classifications '{{WSUSClassification}}' -numOfSyncsPerDay {{WSUSNumOfSyncsPerDay}}"
         - name: "InstallSqlCmd"
           action: "aws:runCommand"
@@ -694,8 +752,17 @@ Resources:
               CloudWatchLogGroupName: !Ref 'QuickStartLogs'
             Parameters:
               sourceType: "S3"
-              sourceInfo: !Sub ['{"path": "https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/install-sqlcmd.ps1"}',
-                  {QSS3Region: !If [GovCloudCondition, s3-us-gov-west-1, s3]}]
+              sourceInfo: 
+                !Sub 
+                  - '{"path": "https://${S3Bucket}.s3.${S3Region}.{{URLSuffix}}/{{QSS3KeyPrefix}}scripts/install-sqlcmd.ps1"}'
+                  - S3Bucket: !If
+                      - UsingDefaultBucket
+                      - !Sub '${QSS3BucketName}-${AWS::Region}'
+                      - !Ref QSS3BucketName
+                    S3Region: !If 
+                      - UsingDefaultBucket
+                      - !Ref AWS::Region
+                      - !Ref QSS3BucketRegion
               commandLine: "./install-sqlcmd.ps1"
         - name: "BranchMSSQL"
           action: aws:branch
@@ -717,10 +784,18 @@ Resources:
               CloudWatchLogGroupName: !Ref 'QuickStartLogs'
             Parameters:
               sourceType: "S3"
-              sourceInfo: !Sub ['{"path": "https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/migrate-susdb.ps1"}',
-                  {QSS3Region: !If [GovCloudCondition, s3-us-gov-west-1, s3]}]
+              sourceInfo: 
+                !Sub 
+                  - '{"path": "https://${S3Bucket}.s3.${S3Region}.{{URLSuffix}}/{{QSS3KeyPrefix}}scripts/migrate-susdb.ps1"}'
+                  - S3Bucket: !If
+                      - UsingDefaultBucket
+                      - !Sub '${QSS3BucketName}-${AWS::Region}'
+                      - !Ref QSS3BucketName
+                    S3Region: !If 
+                      - UsingDefaultBucket
+                      - !Ref AWS::Region
+                      - !Ref QSS3BucketRegion
               commandLine: "./migrate-susdb.ps1"
-
         # Determines if CFN Needs to be Signaled or if Work flow should just end
         - name: CFNSignalEnd
           action: aws:branch
@@ -795,8 +870,8 @@ Resources:
       InstanceType:
         Ref: WorkloadInstanceType
       NetworkInterfaces:
-      - DeleteOnTermination: 'true'
-        DeviceIndex: 0
+      - DeleteOnTermination: true
+        DeviceIndex: '0'
         SubnetId:
           Ref: PrivateSubnet1ID
         GroupSet:
@@ -812,7 +887,7 @@ Resources:
       BlockDeviceMappings:
       - DeviceName: "/dev/sda1"
         Ebs:
-          VolumeSize: '100'
+          VolumeSize: 100
           VolumeType: gp2
       - DeviceName: "/dev/sdm"
         Ebs:
@@ -830,6 +905,14 @@ Resources:
             - "$instanceId = (New-Object System.Net.WebClient).DownloadString('http://169.254.169.254/latest/meta-data/instance-id')\n"
             - 'Start-SSMAutomationExecution -DocumentName '
             - !Sub '"${WSUSAutomation}"'
+            - ';"URLSuffix"='
+            - !Sub '"${AWS::URLSuffix}"'
+            - ';"QSS3BucketName"='
+            - !If [UsingDefaultBucket, !Sub '"${QSS3BucketName}-${AWS::Region}"', !Sub '"${QSS3BucketName}"']
+            - ';"QSS3BucketRegion"='
+            - !If [UsingDefaultBucket, !Sub '"${AWS::Region}"', !Sub '"${QSS3BucketRegion}"']
+            - ';"QSS3KeyPrefix"='
+            - !Sub '"${QSS3KeyPrefix}"'
             - ' -Parameter @{'
             - '"WSUSInstanceId"='
             - "$instanceId"
@@ -847,14 +930,7 @@ Resources:
           Statement:
           - Action:
             - s3:GetObject
-            Resource:
-              Fn::Sub:
-              - arn:${Partition}:s3:::${QSS3BucketName}/${QSS3KeyPrefix}*
-              - Partition:
-                  Fn::If:
-                  - GovCloudCondition
-                  - aws-us-gov
-                  - aws
+            Resource: "*"
             Effect: Allow
           - Action:
             - s3:*
@@ -923,12 +999,12 @@ Resources:
         Ref: VPCID
       SecurityGroupIngress:
       - IpProtocol: tcp
-        FromPort: '8530'
-        ToPort: '8530'
+        FromPort: 8530
+        ToPort: 8530
         CidrIp: !Ref VPCCIDR
       - IpProtocol: tcp
-        FromPort: '8531'
-        ToPort: '8531'
+        FromPort: 8531
+        ToPort: 8531
         CidrIp: !Ref VPCCIDR
 Outputs:
   InstanceIP:
