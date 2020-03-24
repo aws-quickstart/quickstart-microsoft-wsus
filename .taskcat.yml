@@ -1,0 +1,38 @@
+project:
+  name: quickstart-microsoft-wsus
+  owner: quickstart-eng@amazon.com
+  package_lambda: false
+  regions:
+  - ap-northeast-1
+  - ap-northeast-2
+  - ap-south-1
+  - ap-southeast-1
+  - ap-southeast-2
+  - eu-central-1
+  - eu-west-1
+  - us-east-1
+  - us-east-2
+  - us-west-1
+  - us-west-2
+  s3_bucket: ''
+tests:
+  wsus-master:
+    parameters:
+      AdminPassword: $[taskcat_genpass_16]
+      AvailabilityZones: $[taskcat_getaz_2]
+      KeyPairName: $[taskcat_getkeypair]
+      QSS3BucketName: $[taskcat_autobucket]
+      QSS3BucketRegion: $[taskcat_current_region]
+      WSUSServerNetBIOSName: WSUS
+      WSUSLanguagesList: en
+      WSUSProductList: SQL Server 2012 R2, SQL Server 2016, SQL Server 2017, Windows Server 2012 R2, Windows Server 2016, Windows Server 2019
+      WSUSClassification: Applications, Update Rollups, Security Updates, Critical Updates, Service Packs, Updates, Drivers, Driver Sets
+      WSUSNumOfSyncsPerDay: 1
+      WindowsVersion: Windows2019Core
+    regions:
+    - eu-central-1
+    - eu-west-1
+    - us-east-1
+    - us-west-1
+    s3_bucket: ''
+    template: templates/quickstart-microsoft-wsus-master.template
