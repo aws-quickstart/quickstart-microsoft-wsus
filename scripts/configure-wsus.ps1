@@ -46,6 +46,8 @@ While ($subscription.GetSynchronizationStatus() -ne 'NotProcessing') {
 }
 Write-Host "Sync is done."
 
+Get-WsusProduct | Set-WSUSProduct -Disable
+
 #Configure the Platforms that we want WSUS to receive updates
 $productList = CommaSeparatedListToStringCollection -commaSeparatedList $products
 Get-WsusProduct | where-Object {
