@@ -20,6 +20,7 @@ tests:
     parameters:
       AdminPassword: $[taskcat_genpass_16]
       AvailabilityZones: $[taskcat_getaz_2]
+      IncludeRDGW: "No. Please do not include a Remote Desktop Gateway autoscaling group."
       KeyPairName: $[taskcat_getkeypair]
       QSS3BucketName: $[taskcat_autobucket]
       QSS3BucketRegion: $[taskcat_current_region]
