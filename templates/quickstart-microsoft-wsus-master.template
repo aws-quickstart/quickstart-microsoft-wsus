@@ -75,8 +75,6 @@ Metadata:
         default: RD Gateway instance type
       RDGWCIDR:
         default: Allowed RD Gateway external access CIDR
-      S3BucketName:
-        default: S3 bucket name
       VPCCIDR:
         default: VPC CIDR
       KeyPairName:
@@ -310,7 +308,6 @@ Resources:
         PublicSubnet2CIDR: !Ref 'PublicSubnet2CIDR'
         VPCCIDR: !Ref 'VPCCIDR'
   WorkloadStack:
-    DependsOn: VPCStack
     Type: AWS::CloudFormation::Stack
     Properties:
       TemplateURL: 
@@ -346,7 +343,6 @@ Resources:
         QSS3KeyPrefix: !Ref 'QSS3KeyPrefix'
         VPCID: !GetAtt 'VPCStack.Outputs.VPCID'
   RDGWStack:
-    DependsOn: VPCStack
     Condition: RDGWSelected
     Type: AWS::CloudFormation::Stack
     Properties:

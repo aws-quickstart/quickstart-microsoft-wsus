@@ -230,10 +230,6 @@ Parameters:
     Description: Type of EC2 instance for the workload instance.
     Type: String
 Conditions:
-  GovCloudCondition:
-    Fn::Equals:
-    - Ref: AWS::Region
-    - us-gov-west-1
   WindowsFullSelected:
     Fn::Equals:
     - Ref: WindowsVersion
@@ -242,10 +238,6 @@ Conditions:
     Fn::Equals:
     - Ref: WindowsVersion
     - Windows2019Core
-  SQL2017StandardSelected:
-    Fn::Equals:
-    - Ref: WindowsVersion
-    - Windows2019Full_MSSQL2017Standard
   ADJoinSelected:
     Fn::Equals:
     - Ref: DomainJoin
@@ -439,13 +431,20 @@ Resources:
             - logs:CreateLogGroup
             - logs:CreateLogStream
             - logs:PutLogEvents
-            Resource: arn:aws:logs:*:*:*
+            Resource: !Sub arn:${AWS::Partition}:logs:*:*:*
           - Effect: Allow
             Action:
             - ec2:DescribeImages
             Resource: "*"
   AWSQuickstartWSUSRole:
     Type: AWS::IAM::Role
+    Metadata:
+      cfn-lint:
+        config:
+          ignore_checks:
+            - EIAMPolicyWildcardResource
+            - EIAMPolicyActionWildcard
+# * required per EC2 documentation
     Properties:
       Policies:
         - PolicyDocument:
@@ -454,7 +453,9 @@ Resources:
               - Action:
                   - s3:GetObject
                   - s3:ListBucket
-                Resource: "*"
+                Resource: !Sub
+                  - arn:${AWS::Partition}:s3:::${S3Bucket}/${QSS3KeyPrefix}*
+                  - S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
                 Effect: Allow
           PolicyName: aws-quick-start-s3-policy
         - PolicyDocument:
@@ -929,12 +930,11 @@ Resources:
           Version: '2012-10-17'
           Statement:
           - Action:
-            - s3:GetObject
-            Resource: "*"
-            Effect: Allow
-          - Action:
-            - s3:*
-            Resource: "*"
+              - s3:GetObject
+              - s3:ListBucket
+            Resource: !Sub
+              - arn:${AWS::Partition}:s3:::${S3Bucket}/${QSS3KeyPrefix}*
+              - S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
             Effect: Allow
         PolicyName: aws-quick-start-s3-policy
       - PolicyDocument:
