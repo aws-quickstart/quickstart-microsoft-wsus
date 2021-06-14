@@ -406,7 +406,7 @@ Resources:
         Fn::GetAtt:
         - AMIInfoFunctionLambdaExecutionRole
         - Arn
-      Runtime: nodejs10.x
+      Runtime: nodejs12.x
       Timeout: 30
   AMIInfoFunctionLambdaExecutionRole:
     Type: AWS::IAM::Role
