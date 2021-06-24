@@ -410,6 +410,11 @@ Resources:
       Timeout: 30
   AMIInfoFunctionLambdaExecutionRole:
     Type: AWS::IAM::Role
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W11
+            reason: "* required per EC2 documentation"
     Properties:
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
@@ -444,7 +449,12 @@ Resources:
           ignore_checks:
             - EIAMPolicyWildcardResource
             - EIAMPolicyActionWildcard
-# * required per EC2 documentation
+      cfn_nag:
+        rules_to_suppress:
+          - id: F3
+            reason: "* required per EC2 documentation"
+          - id: W11
+            reason: "* required per EC2 documentation"
     Properties:
       Policies:
         - PolicyDocument:
@@ -924,6 +934,11 @@ Resources:
             - "</powershell>\n"
   WSUSRole:
     Type: AWS::IAM::Role
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W11
+            reason: "* required per EC2 documentation"
     Properties:
       Policies:
       - PolicyDocument:
@@ -993,6 +1008,13 @@ Resources:
       Count: 1
   WorkloadSecurityGroup:
     Type: AWS::EC2::SecurityGroup
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: F1000
+            reason: "Standard Amazon practice"
+          - id: W36
+            reason: "Group description is sufficient"
     Properties:
       GroupDescription: Allow access to the Workload instances
       VpcId:
