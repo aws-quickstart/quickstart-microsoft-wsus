@@ -5,6 +5,11 @@ Description: >-
   This template creates EC2 instances and related resources. You will be billed for
   the AWS resources used if you create a stack from this template. (qs-1q77ks439)
 Metadata:
+  cfn-lint:
+    config:
+      ignore_checks:
+        - W9006
+        - E9101
   AWS::CloudFormation::Interface:
     ParameterGroups:
     - Label:
@@ -939,6 +944,10 @@ Resources:
         rules_to_suppress:
           - id: W11
             reason: "* required per EC2 documentation"
+      cfn_lint:
+        config:
+          ignore_checks:
+            - EIAMPolicyWildcardResource
     Properties:
       Policies:
       - PolicyDocument:
@@ -975,7 +984,7 @@ Resources:
               Resource: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:role/${AWSQuickstartWSUSRole}'
         PolicyName: QS-WSUS-SSM-PassRole
       ManagedPolicyArns:
-      - "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+      - !Sub "arn:${AWS::Partition}:iam::aws:policy/AmazonSSMManagedInstanceCore"
       Path: "/"
       AssumeRolePolicyDocument:
         Statement:
