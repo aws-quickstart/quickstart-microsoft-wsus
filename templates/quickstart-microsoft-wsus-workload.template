@@ -600,6 +600,10 @@ Resources:
               CloudWatchLogGroupName: !Ref 'QuickStartLogs'
             Parameters:
               commands: !Sub "Rename-Computer -Restart -NewName '${WSUSServerNetBIOSName}'"
+        - name: "sleepRename"
+          action: "aws:sleep"
+          inputs:
+            Duration: PT480S
         - name: "InstallDscModules"
           action: "aws:runCommand"
           onFailure: "step:signalfailure"
